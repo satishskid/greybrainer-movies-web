@@ -13,7 +13,7 @@ interface ResearchItem {
   type: string;
   content: string;
   editorial: string | null;
-  createdAt: any;
+  createdAt: { toDate?: () => Date } | null;
   status: string;
   createdBy: string;
 }

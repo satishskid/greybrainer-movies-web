@@ -15,12 +15,12 @@ interface ResearchDoc {
   content: string;
   editorial: string | null;
   socials: { twitter?: string; linkedin?: string } | null;
-  createdAt: any;
+  createdAt: { toDate?: () => Date } | null;
   status: string;
   createdBy: string;
   slug?: string;
   coverImageUrl?: string;
-  publishedAt?: any;
+  publishedAt?: { toDate?: () => Date; seconds?: number } | Date | string | null;
 }
 
 function slugify(text: string): string {

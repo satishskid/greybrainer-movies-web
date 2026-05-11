@@ -2,29 +2,17 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Clock, User, ArrowLeft, Share2 } from "lucide-react";
+import { Clock, User, ArrowLeft, Share2, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import type { SiteArticle } from "@/lib/articleTypes";
 
 interface ReviewArticleProps {
-  article: {
-    id: string;
-    title: string;
-    editorial: string | null;
-    content: string;
-    coverImageUrl?: string;
-    createdBy: string;
-    publishedAt?: any;
-    createdAt?: any;
-  };
+  article: SiteArticle;
 }
 
 export function ReviewArticle({ article }: ReviewArticleProps) {
   const displayContent = article.editorial || article.content || "";
-  const publishDate = article.publishedAt?.seconds
-    ? new Date(article.publishedAt.seconds * 1000)
-    : article.createdAt?.seconds
-      ? new Date(article.createdAt.seconds * 1000)
-      : new Date();
+  const publishDate = article.publishedAt ? new Date(article.publishedAt) : new Date();
 
   return (
     <article className="min-h-screen bg-slate-900">
@@ -50,7 +38,7 @@ export function ReviewArticle({ article }: ReviewArticleProps) {
             Back to Home
           </Link>
           <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider w-fit mb-4">
-            Deep Review
+            {article.categoryLabel}
           </span>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
             {article.title}
@@ -69,17 +57,33 @@ export function ReviewArticle({ article }: ReviewArticleProps) {
               })}
             </span>
             <button
-              onClick={() => {
-                navigator.share?.({
-                  title: article.title,
-                  url: window.location.href,
-                }) || navigator.clipboard.writeText(window.location.href);
+              onClick={async () => {
+                if (navigator.share) {
+                  await navigator.share({
+                    title: article.title,
+                    url: window.location.href,
+                  });
+                  return;
+                }
+
+                await navigator.clipboard.writeText(window.location.href);
               }}
               className="flex items-center hover:text-white transition"
             >
               <Share2 className="w-4 h-4 mr-2" />
               Share
             </button>
+            {article.sourceUrl && (
+              <a
+                href={article.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center hover:text-white transition"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Source
+              </a>
+            )}
           </div>
         </div>
       </div>

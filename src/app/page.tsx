@@ -2,42 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Film, TrendingUp, BookOpen, Layers, Loader2 } from "lucide-react";
-import { format } from "date-fns";
-
-interface PublishedArticle {
-  id: string;
-  title: string;
-  type: string;
-  slug: string;
-  editorial: string | null;
-  content: string;
-  coverImageUrl?: string;
-  createdBy: string;
-  publishedAt?: any;
-  createdAt?: any;
-  status: string;
-}
+import type { SiteArticle } from "@/lib/articleTypes";
 
 export default function Home() {
-  const [articles, setArticles] = useState<PublishedArticle[]>([]);
+  const [articles, setArticles] = useState<SiteArticle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPublished() {
       try {
-        const q = query(
-          collection(db, "published_research"),
-          where("status", "==", "published"),
-          orderBy("publishedAt", "desc"),
-          limit(12)
-        );
-        const snapshot = await getDocs(q);
-        setArticles(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PublishedArticle)
-        );
+        const response = await fetch("/api/articles?limit=60");
+        if (!response.ok) throw new Error(`Articles request failed: ${response.status}`);
+        const payload = (await response.json()) as { articles: SiteArticle[] };
+        setArticles(payload.articles);
       } catch (err) {
         console.error("Failed to fetch published articles:", err);
       } finally {
@@ -48,19 +26,23 @@ export default function Home() {
   }, []);
 
   const hero = articles[0] || null;
-  const deepReviews = articles.filter((a) => a.type === "research_export");
-  const insights = articles.filter((a) => a.type !== "research_export");
+  const deepReviews = articles.filter((a) => a.kind === "review").slice(0, 8);
+  const briefings = articles.filter((a) => a.kind === "brief").slice(0, 8);
+  const insights = articles.filter((a) => a.kind === "insight").slice(0, 6);
 
-  function getDateString(article: PublishedArticle) {
-    const ts = article.publishedAt || article.createdAt;
-    if (!ts?.seconds) return "";
-    return format(new Date(ts.seconds * 1000), "MMM d, yyyy");
+  function getDateString(article: SiteArticle) {
+    if (!article.publishedAt) return "";
+    return new Date(article.publishedAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   }
 
-  function getExcerpt(article: PublishedArticle, maxLen = 180) {
-    const text = article.editorial || article.content || "";
+  function getExcerpt(article: SiteArticle, maxLen = 180) {
+    const text = article.excerpt || article.editorial || article.content || "";
     if (text.length <= maxLen) return text;
-    return text.slice(0, maxLen).replace(/[#*_\n]/g, "").trim() + "…";
+    return text.slice(0, maxLen).replace(/[#*_\n]/g, "").trim() + "...";
   }
 
   return (
@@ -86,7 +68,7 @@ export default function Home() {
         <div className="relative z-20 h-full flex flex-col justify-end px-8 pb-24 max-w-7xl mx-auto">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">
-              Latest Deep Review
+              {hero?.categoryLabel || "Latest Analysis"}
             </span>
             {hero && <span className="text-yellow-400 font-bold">★ Greybrainer Certified</span>}
           </div>
@@ -104,7 +86,7 @@ export default function Home() {
               className="bg-white text-slate-900 px-8 py-3 rounded-md font-semibold hover:bg-slate-200 transition flex items-center"
             >
               <Film className="w-5 h-5 mr-2" />
-              Read Analysis
+              Read Now
             </Link>
             <Link
               href="/hub"
@@ -161,30 +143,42 @@ export default function Home() {
           </section>
         )}
 
-        {/* Daily Briefings Row (Placeholder - future content type) */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <TrendingUp className="w-6 h-6 mr-3 text-red-500" />
-              Daily Briefings
-            </h2>
-            <span className="text-sm text-slate-500">Coming Soon</span>
-          </div>
-          <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="min-w-[300px] h-48 bg-slate-800/50 rounded-lg border border-slate-700/30 flex flex-col justify-end p-4 relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent z-10" />
-                <div className="relative z-20">
-                  <span className="text-xs text-slate-500 mb-2 block">Coming Soon</span>
-                  <h3 className="text-lg font-semibold text-slate-500">Daily Industry Brief</h3>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Daily Briefings Row */}
+        {briefings.length > 0 && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center">
+                <TrendingUp className="w-6 h-6 mr-3 text-red-500" />
+                Daily Briefings
+              </h2>
+              <Link href="/insights" className="text-sm text-slate-400 hover:text-white transition">
+                View Insights
+              </Link>
+            </div>
+            <div className="flex space-x-6 overflow-x-auto pb-4 scrollbar-hide">
+              {briefings.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/reviews/${article.slug}`}
+                  className="group min-w-[300px] h-48 bg-slate-800 rounded-lg border border-slate-700 flex flex-col justify-end p-4 relative overflow-hidden hover:border-slate-500 transition"
+                >
+                  {article.coverImageUrl && (
+                    <img
+                      src={article.coverImageUrl}
+                      alt={article.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-45 group-hover:opacity-65 transition"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/50 to-transparent z-10" />
+                  <div className="relative z-20">
+                    <span className="text-xs text-red-300 mb-2 block">{getDateString(article)}</span>
+                    <h3 className="text-lg font-semibold text-white line-clamp-2">{article.title}</h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Insights & Research Row */}
         <section>
@@ -203,7 +197,7 @@ export default function Home() {
                   className="h-64 bg-slate-800 rounded-lg border border-slate-700 p-6 flex flex-col cursor-pointer hover:bg-slate-800/80 transition"
                 >
                   <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider mb-2">
-                    Research
+                    {article.categoryLabel}
                   </span>
                   <h3 className="text-xl font-bold text-white mb-2">{article.title}</h3>
                   <p className="text-slate-400 text-sm mb-4 line-clamp-3">

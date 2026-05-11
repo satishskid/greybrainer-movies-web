@@ -2,38 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { BookOpen, Loader2 } from "lucide-react";
-import { format } from "date-fns";
-
-interface PublishedArticle {
-  id: string;
-  title: string;
-  slug: string;
-  editorial: string | null;
-  content: string;
-  coverImageUrl?: string;
-  publishedAt?: any;
-  createdAt?: any;
-}
+import type { SiteArticle } from "@/lib/articleTypes";
 
 export default function ReviewsPage() {
-  const [articles, setArticles] = useState<PublishedArticle[]>([]);
+  const [articles, setArticles] = useState<SiteArticle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchAll() {
       try {
-        const q = query(
-          collection(db, "published_research"),
-          where("status", "==", "published"),
-          orderBy("publishedAt", "desc")
-        );
-        const snapshot = await getDocs(q);
-        setArticles(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as PublishedArticle)
-        );
+        const response = await fetch("/api/articles?kind=review&limit=80");
+        if (!response.ok) throw new Error(`Reviews request failed: ${response.status}`);
+        const payload = (await response.json()) as { articles: SiteArticle[] };
+        setArticles(payload.articles);
       } catch (err) {
         console.error("Failed to fetch reviews:", err);
       } finally {
@@ -93,14 +75,15 @@ export default function ReviewsPage() {
                     {article.title}
                   </h2>
                   <p className="text-slate-400 text-sm line-clamp-2">
-                    {(article.editorial || article.content || "")
-                      .replace(/[#*_\n]/g, "")
-                      .slice(0, 150)}
-                    …
+                    {article.excerpt}
                   </p>
                   <p className="text-xs text-slate-500 mt-3">
-                    {article.publishedAt?.seconds
-                      ? format(new Date(article.publishedAt.seconds * 1000), "MMM d, yyyy")
+                    {article.publishedAt
+                      ? new Date(article.publishedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
                       : ""}
                   </p>
                 </div>
