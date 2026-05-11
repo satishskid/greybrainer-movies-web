@@ -253,8 +253,12 @@ export default function Home() {
             <div>
               <h4 className="text-sm font-semibold text-slate-300 mb-3">Connect</h4>
               <nav className="space-y-2 text-sm text-slate-400">
-                <a href="https://medium.com/me/following-feed/writers/feb55321d5bf" target="_blank" className="block hover:text-white transition">Medium</a>
-                <a href="https://greybrain.ai" target="_blank" className="block hover:text-white transition">greybrain.ai</a>
+                <a href="https://www.linkedin.com/company/greybrainer/" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">LinkedIn</a>
+                <a href="https://medium.com/@GreyBrainer" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Medium</a>
+                <a href="https://x.com/Greybrainlens" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">X (Twitter)</a>
+                <a href="https://www.facebook.com/share/1DmapQ7Hw3/" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Facebook</a>
+                <a href="https://www.instagram.com/greybrainlens" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Instagram</a>
+                <a href="https://greybrain.ai" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">greybrain.ai</a>
               </nav>
             </div>
           </div>
