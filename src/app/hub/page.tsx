@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Layers, Settings, FileText, BarChart, PenTool, Loader2 } from "lucide-react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -116,9 +117,12 @@ export default function WriterHub() {
                       {item.createdAt?.toDate ? format(item.createdAt.toDate(), "MMM d, yyyy 'at' h:mm a") : 'Unknown Date'}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-red-400 hover:text-red-300 font-medium text-sm opacity-0 group-hover:opacity-100 transition">
-                        Edit & Publish →
-                      </button>
+                      <Link
+                        href={`/hub/${item.id}`}
+                        className="text-red-400 hover:text-red-300 font-medium text-sm opacity-0 group-hover:opacity-100 transition"
+                      >
+                        Edit &amp; Publish →
+                      </Link>
                     </td>
                   </tr>
                 ))
