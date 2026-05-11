@@ -12,7 +12,7 @@ export default function ComparisonsPage() {
   useEffect(() => {
     async function fetchComparisons() {
       try {
-        const response = await fetch("/api/articles?kind=comparison&limit=60");
+        const response = await fetch("/api/articles?kind=comparison&limit=120");
         if (!response.ok) throw new Error(`Comparisons request failed: ${response.status}`);
         const payload = (await response.json()) as { articles: SiteArticle[] };
         setArticles(payload.articles);

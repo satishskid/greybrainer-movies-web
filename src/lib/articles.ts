@@ -1,9 +1,25 @@
 import { collection, getDocs, limit as firestoreLimit, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import lensArchiveData from "@/data/lensArchive.json";
 import type { ArticleKind, SiteArticle } from "@/lib/articleTypes";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
-const DEFAULT_ARCHIVE_LIMIT = 80;
+const DEFAULT_ARCHIVE_LIMIT = 220;
+
+interface LensArchiveEntry {
+  id: string;
+  title: string;
+  slug: string;
+  kind: string;
+  content: string;
+  excerpt?: string;
+  coverImageUrl?: string;
+  createdBy?: string;
+  publishedAt: string | null;
+  publishedAtMs: number;
+  sourceUrl?: string;
+  tags?: string[];
+}
 
 const FALLBACK_IMAGES: Record<ArticleKind, string> = {
   review:
@@ -280,6 +296,32 @@ function normalizeFeedItem(itemXml: string, index: number): SiteArticle | null {
   };
 }
 
+function normalizeStaticArchiveEntry(entry: LensArchiveEntry): SiteArticle {
+  const tags = Array.isArray(entry.tags) ? entry.tags.map(String) : [];
+  const kind = isArticleKind(entry.kind) ? entry.kind : inferKind(entry.title, tags);
+  const content = entry.content || `# ${entry.title}`;
+
+  return {
+    id: entry.id,
+    title: entry.title,
+    slug: entry.slug || slugify(entry.title),
+    kind,
+    categoryLabel: categoryLabel(kind),
+    content,
+    editorial: content,
+    excerpt: entry.excerpt || makeExcerpt(content),
+    coverImageUrl: entry.coverImageUrl || FALLBACK_IMAGES[kind],
+    createdBy: entry.createdBy || "GreyBrain Lens",
+    publishedAt: entry.publishedAt,
+    publishedAtMs: Number(entry.publishedAtMs) || 0,
+    source: "lens-archive",
+    sourceUrl: entry.sourceUrl,
+    status: "published",
+    tags,
+    type: kind === "review" ? "archive_review" : `archive_${kind}`,
+  };
+}
+
 async function getPublishedFirebaseArticles(maxCount: number) {
   try {
     const publishedQuery = query(
@@ -316,14 +358,19 @@ async function getLensArchiveArticles() {
   }
 }
 
+function getStaticLensArchiveArticles() {
+  return (lensArchiveData.articles as LensArchiveEntry[]).map(normalizeStaticArchiveEntry);
+}
+
 export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<SiteArticle[]> {
+  const staticLensArticles = getStaticLensArchiveArticles();
   const [firebaseArticles, lensArticles] = await Promise.all([
     withTimeout(getPublishedFirebaseArticles(maxCount), [], "Firebase published articles"),
     withTimeout(getLensArchiveArticles(), [], "Lens archive feed"),
   ]);
 
   const bySlug = new Map<string, SiteArticle>();
-  for (const article of [...firebaseArticles, ...lensArticles]) {
+  for (const article of [...firebaseArticles, ...staticLensArticles, ...lensArticles]) {
     if (!article.slug) continue;
     if (!bySlug.has(article.slug)) {
       bySlug.set(article.slug, article);

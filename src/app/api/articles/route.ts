@@ -7,9 +7,9 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const kind = searchParams.get("kind");
   const limitParam = Number(searchParams.get("limit") ?? "80");
-  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : 80;
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 220) : 80;
 
-  const allArticles = await getAllArticles(100);
+  const allArticles = await getAllArticles(220);
   const filtered = isArticleKind(kind) ? allArticles.filter((article) => article.kind === kind) : allArticles;
   const counts = allArticles.reduce(
     (acc, article) => {

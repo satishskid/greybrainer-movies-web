@@ -12,7 +12,7 @@ export default function InsightsPage() {
   useEffect(() => {
     async function fetchInsights() {
       try {
-        const response = await fetch("/api/articles?kind=insight&limit=80");
+        const response = await fetch("/api/articles?kind=insight&limit=160");
         if (!response.ok) throw new Error(`Insights request failed: ${response.status}`);
         const payload = (await response.json()) as { articles: SiteArticle[] };
         setArticles(payload.articles);

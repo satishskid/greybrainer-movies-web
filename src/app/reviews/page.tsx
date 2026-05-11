@@ -12,7 +12,7 @@ export default function ReviewsPage() {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const response = await fetch("/api/articles?kind=review&limit=80");
+        const response = await fetch("/api/articles?kind=review&limit=160");
         if (!response.ok) throw new Error(`Reviews request failed: ${response.status}`);
         const payload = (await response.json()) as { articles: SiteArticle[] };
         setArticles(payload.articles);
