@@ -2,11 +2,14 @@
 
 import { useEffect, useState, use } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check } from "lucide-react";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { HubAuthGate } from "@/components/HubAuthGate";
+import type { HubRole } from "@/lib/hubRoles";
 
 interface ResearchDoc {
   id: string;
@@ -30,7 +33,25 @@ function slugify(text: string): string {
     .replace(/(^-|-$)+/g, "");
 }
 
-export default function ArticleEditor({ params }: { params: Promise<{ id: string }> }) {
+export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <HubAuthGate>
+      {(session) => <ArticleEditor params={params} {...session} />}
+    </HubAuthGate>
+  );
+}
+
+function ArticleEditor({
+  params,
+  user,
+  role,
+  signOut,
+}: {
+  params: Promise<{ id: string }>;
+  user: User;
+  role: HubRole;
+  signOut: () => Promise<void>;
+}) {
   const { id } = use(params);
   const [article, setArticle] = useState<ResearchDoc | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,9 +187,23 @@ export default function ArticleEditor({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="flex items-center space-x-3">
+          <div className="hidden xl:block text-right">
+            <div className="flex items-center justify-end text-xs font-semibold uppercase tracking-wider text-green-400">
+              <ShieldCheck className="w-4 h-4 mr-1.5" />
+              {role}
+            </div>
+            <p className="text-xs text-slate-400">{user.email}</p>
+          </div>
           {saveMsg && (
             <span className="text-sm text-green-400 animate-pulse">{saveMsg}</span>
           )}
+          <button
+            onClick={signOut}
+            className="hidden md:flex items-center px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-md transition"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign out
+          </button>
           <button
             onClick={() => setPreviewMode(!previewMode)}
             className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-md transition"

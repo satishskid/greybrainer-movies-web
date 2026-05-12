@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Layers, Settings, FileText, BarChart, PenTool, Loader2 } from "lucide-react";
+import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck } from "lucide-react";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { format } from "date-fns";
+import { HubAuthGate } from "@/components/HubAuthGate";
+import type { HubRole } from "@/lib/hubRoles";
 
 interface ResearchItem {
   id: string;
@@ -19,6 +22,22 @@ interface ResearchItem {
 }
 
 export default function WriterHub() {
+  return (
+    <HubAuthGate>
+      {(session) => <WriterHubContent {...session} />}
+    </HubAuthGate>
+  );
+}
+
+function WriterHubContent({
+  user,
+  role,
+  signOut,
+}: {
+  user: User;
+  role: HubRole;
+  signOut: () => Promise<void>;
+}) {
   const [items, setItems] = useState<ResearchItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,10 +79,23 @@ export default function WriterHub() {
           </a>
         </nav>
         
-        <div className="mt-auto">
+        <div className="mt-auto space-y-4">
+          <div className="rounded-md border border-slate-800 bg-slate-950/60 p-3">
+            <div className="flex items-center text-xs font-semibold uppercase tracking-wider text-green-400">
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              {role}
+            </div>
+            <p className="mt-2 truncate text-xs text-slate-400">{user.email}</p>
+          </div>
           <a href="#" className="flex items-center text-slate-400 hover:text-slate-200 transition">
             <Settings className="w-5 h-5 mr-3" /> Settings
           </a>
+          <button
+            onClick={signOut}
+            className="flex items-center text-slate-400 hover:text-slate-200 transition"
+          >
+            <LogOut className="w-5 h-5 mr-3" /> Sign out
+          </button>
         </div>
       </aside>
 
@@ -74,9 +106,10 @@ export default function WriterHub() {
             <h1 className="text-3xl font-bold text-white mb-2">Inbox: Pending Reviews</h1>
             <p className="text-slate-400">Research exported from Greybrainer Engine waiting for human polish.</p>
           </div>
-          <button className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-md font-semibold transition">
-            Connect Medium API
-          </button>
+          <div className="hidden md:block text-right">
+            <p className="text-xs uppercase tracking-wider text-slate-500">Signed in</p>
+            <p className="text-sm font-semibold text-white">{user.email}</p>
+          </div>
         </header>
 
         {/* List of imported Firebase items */}
