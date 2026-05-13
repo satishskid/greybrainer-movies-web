@@ -180,6 +180,80 @@ export default function Home() {
           </section>
         )}
 
+        {/* Methodology Section */}
+        <section className="border-y border-slate-800 py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.35fr] gap-8 items-start">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-red-400">
+                The Greybrainer Lens
+              </span>
+              <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white">
+                A sharper reading for people who make cinema.
+              </h2>
+              <p className="mt-4 text-slate-300 leading-7">
+                Greybrainer studies a film as a living system: story intent, craft execution,
+                audience movement, and cultural timing. The public review stays readable; the
+                deeper diagnostic engine remains proprietary.
+              </p>
+              <p className="mt-4 text-sm text-slate-500 leading-6">
+                Built for serious viewers, and useful for producers, directors, writers, and
+                creative teams who want a clear second-room reading of how a film is working.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-md border border-slate-800 bg-slate-900/80 p-5">
+                <BookOpen className="w-6 h-6 text-indigo-400 mb-4" />
+                <h3 className="text-lg font-semibold text-white">Narrative Signal</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  What the film promises emotionally, where its conflict lives, and whether the
+                  story earns the feeling it asks from the audience.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-slate-800 bg-slate-900/80 p-5">
+                <Film className="w-6 h-6 text-red-400 mb-4" />
+                <h3 className="text-lg font-semibold text-white">Craft &amp; Execution</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Performance, staging, editing, music, image, and concept are read together as
+                  connected choices, not isolated departments.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-slate-800 bg-slate-900/80 p-5">
+                <TrendingUp className="w-6 h-6 text-amber-300 mb-4" />
+                <h3 className="text-lg font-semibold text-white">Audience Pulse</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  The review tracks how genre memory, platform behavior, cultural mood, and
+                  expectation shape the way a film is received.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-slate-800 bg-slate-900/80 p-5">
+                <Layers className="w-6 h-6 text-teal-400 mb-4" />
+                <h3 className="text-lg font-semibold text-white">Morphokinetics</h3>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  A rhythm map of tension, release, attention, and emotional motion, showing where
+                  the experience rises, stalls, turns, or resolves.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-slate-800 pt-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <p className="text-sm text-slate-400 max-w-3xl">
+              The result is not a simple verdict. It is cinematic intelligence: useful for discovery,
+              positioning, retrospectives, and sharper creative conversations.
+            </p>
+            <Link
+              href="/insights"
+              className="inline-flex w-fit items-center rounded-md bg-slate-800 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-700 transition"
+            >
+              Explore Insights
+            </Link>
+          </div>
+        </section>
+
         {/* Insights & Research Row */}
         <section>
           <div className="flex items-center justify-between mb-6">
