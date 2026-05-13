@@ -13,12 +13,19 @@ import type { HubRole } from "@/lib/hubRoles";
 interface ResearchItem {
   id: string;
   title: string;
-  type: string;
-  content: string;
-  editorial: string | null;
-  createdAt: { toDate?: () => Date } | null;
+  type?: string;
+  kind?: string;
+  categoryLabel?: string;
+  content?: string;
+  editorial?: string | null;
+  createdAt?: { toDate?: () => Date } | null;
+  publishedAt?: string | Date | null;
+  publishedAtMs?: number;
   status: string;
-  createdBy: string;
+  createdBy?: string;
+  slug?: string;
+  source?: "firebase" | "lens-archive";
+  sourceUrl?: string;
 }
 
 export default function WriterHub() {
@@ -46,11 +53,26 @@ function WriterHubContent({
       try {
         const q = query(collection(db, "published_research"), orderBy("createdAt", "desc"));
         const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({
+        const firestoreItems = snapshot.docs.map(doc => ({
           id: doc.id,
+          source: "firebase" as const,
           ...doc.data()
         })) as ResearchItem[];
-        setItems(data);
+
+        const archiveResponse = await fetch("/api/articles?limit=220");
+        const archiveJson = archiveResponse.ok ? await archiveResponse.json() : { articles: [] };
+        const archiveItems = (archiveJson.articles || []).map((article: ResearchItem) => ({
+          ...article,
+          source: article.source || "lens-archive",
+        })) as ResearchItem[];
+
+        const byId = new Map<string, ResearchItem>();
+        for (const item of [...firestoreItems, ...archiveItems]) {
+          if (!item.id || byId.has(item.id)) continue;
+          byId.set(item.id, item);
+        }
+
+        setItems([...byId.values()]);
       } catch (err) {
         console.error("Failed to fetch research from Firebase:", err);
       } finally {
@@ -59,6 +81,33 @@ function WriterHubContent({
     }
     fetchResearch();
   }, []);
+
+  function formatItemDate(item: ResearchItem) {
+    if (item.createdAt?.toDate) {
+      return format(item.createdAt.toDate(), "MMM d, yyyy 'at' h:mm a");
+    }
+
+    if (item.publishedAtMs) {
+      return format(new Date(item.publishedAtMs), "MMM d, yyyy");
+    }
+
+    if (item.publishedAt) {
+      const date = new Date(item.publishedAt);
+      if (!Number.isNaN(date.getTime())) {
+        return format(date, "MMM d, yyyy");
+      }
+    }
+
+    return "Unknown Date";
+  }
+
+  function itemLabel(item: ResearchItem) {
+    if (item.categoryLabel) return item.categoryLabel;
+    if (item.type === "research_export") return "Deep Review";
+    if (item.kind) return item.kind;
+    return item.type || "Article";
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 pt-20 flex">
       {/* Sidebar */}
@@ -103,8 +152,8 @@ function WriterHubContent({
       <main className="flex-1 p-8">
         <header className="mb-8 flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Inbox: Pending Reviews</h1>
-            <p className="text-slate-400">Research exported from Greybrainer Engine waiting for human polish.</p>
+            <h1 className="text-3xl font-bold text-white mb-2">Content Library</h1>
+            <p className="text-slate-400">Engine drafts and Medium archive posts currently powering Greybrainer Movies.</p>
           </div>
           <div className="hidden md:block text-right">
             <p className="text-xs uppercase tracking-wider text-slate-500">Signed in</p>
@@ -134,7 +183,7 @@ function WriterHubContent({
               ) : items.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                    No research found. Generate and export a ZIP from the engine first.
+                    No content found. Generate a report in the engine or import Medium posts first.
                   </td>
                 </tr>
               ) : (
@@ -143,19 +192,28 @@ function WriterHubContent({
                     <td className="px-6 py-4 text-white font-medium">{item.title}</td>
                     <td className="px-6 py-4 text-slate-400">
                       <span className="bg-slate-700 text-xs px-2 py-1 rounded">
-                        {item.type === 'research_export' ? 'Deep Review' : item.type}
+                        {itemLabel(item)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-400 text-sm">
-                      {item.createdAt?.toDate ? format(item.createdAt.toDate(), "MMM d, yyyy 'at' h:mm a") : 'Unknown Date'}
+                      {formatItemDate(item)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/hub/${item.id}`}
-                        className="text-red-400 hover:text-red-300 font-medium text-sm opacity-0 group-hover:opacity-100 transition"
-                      >
-                        Edit &amp; Publish →
-                      </Link>
+                      {item.source === "lens-archive" ? (
+                        <Link
+                          href={item.slug ? `/reviews/${item.slug}` : item.sourceUrl || "/reviews"}
+                          className="text-slate-300 hover:text-white font-medium text-sm opacity-0 group-hover:opacity-100 transition"
+                        >
+                          View live →
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/hub/${item.id}`}
+                          className="text-red-400 hover:text-red-300 font-medium text-sm opacity-0 group-hover:opacity-100 transition"
+                        >
+                          Edit &amp; Publish →
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))
