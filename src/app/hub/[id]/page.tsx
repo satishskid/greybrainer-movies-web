@@ -57,7 +57,7 @@ function ArticleEditor({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"editorial" | "raw" | "social">("editorial");
+  const [activeTab, setActiveTab] = useState<"article" | "social">("article");
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
@@ -233,7 +233,7 @@ function ArticleEditor({
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-8 pt-6">
         <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 w-fit mb-6">
-          {(["editorial", "raw", "social"] as const).map((tab) => (
+          {(["article", "social"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -243,7 +243,7 @@ function ArticleEditor({
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              {tab === "editorial" ? "Publisher Editorial" : tab === "raw" ? "Raw Analysis" : "Social Posts"}
+              {tab === "article" ? "Article Editor" : "Social Posts"}
             </button>
           ))}
         </div>
@@ -266,37 +266,45 @@ function ArticleEditor({
         </div>
 
         {/* Content Area */}
-        {activeTab === "editorial" && (
-          <div className="mb-12">
-            {previewMode ? (
-              <div className="prose prose-invert prose-lg max-w-none bg-slate-800 rounded-lg p-8 border border-slate-700">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedEditorial}</ReactMarkdown>
-              </div>
-            ) : (
-              <textarea
-                value={editedEditorial}
-                onChange={(e) => setEditedEditorial(e.target.value)}
-                className="w-full h-[70vh] bg-slate-800 border border-slate-700 rounded-lg p-6 text-slate-200 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Publisher editorial content will appear here..."
-              />
-            )}
-          </div>
-        )}
+        {activeTab === "article" && (
+          <div className="mb-12 flex flex-col xl:flex-row gap-6">
+            {/* Publisher Editorial Half */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+                <span>Publisher Editorial (Viral Hooks)</span>
+              </h3>
+              {previewMode ? (
+                <div className="prose prose-invert prose-lg max-w-none bg-slate-800 rounded-lg p-6 border border-slate-700 overflow-y-auto max-h-[70vh]">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedEditorial}</ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  value={editedEditorial}
+                  onChange={(e) => setEditedEditorial(e.target.value)}
+                  className="w-full h-[70vh] bg-slate-800 border border-slate-700 rounded-lg p-6 text-slate-200 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Publisher editorial content will appear here..."
+                />
+              )}
+            </div>
 
-        {activeTab === "raw" && (
-          <div className="mb-12">
-            {previewMode ? (
-              <div className="prose prose-invert prose-lg max-w-none bg-slate-800 rounded-lg p-8 border border-slate-700">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedContent}</ReactMarkdown>
-              </div>
-            ) : (
-              <textarea
-                value={editedContent}
-                onChange={(e) => setEditedContent(e.target.value)}
-                className="w-full h-[70vh] bg-slate-800 border border-slate-700 rounded-lg p-6 text-slate-200 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-red-500"
-                placeholder="Raw analysis markdown..."
-              />
-            )}
+            {/* Raw Analysis Half */}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-slate-300 font-bold mb-3 flex items-center gap-2">
+                <span>Detailed Research (Raw Analysis)</span>
+              </h3>
+              {previewMode ? (
+                <div className="prose prose-invert prose-sm max-w-none bg-slate-900 rounded-lg p-6 border border-slate-700 overflow-y-auto max-h-[70vh]">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedContent}</ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full h-[70vh] bg-slate-900 border border-slate-700 rounded-lg p-6 text-slate-400 text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-slate-500"
+                  placeholder="Raw analysis markdown..."
+                />
+              )}
+            </div>
           </div>
         )}
 

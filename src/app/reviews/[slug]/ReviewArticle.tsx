@@ -11,7 +11,10 @@ interface ReviewArticleProps {
 }
 
 export function ReviewArticle({ article }: ReviewArticleProps) {
-  const displayContent = article.editorial || article.content || "";
+  const showBoth = article.editorial && article.content && article.editorial !== article.content;
+  const displayContent = showBoth 
+    ? `${article.editorial}\n\n---\n\n## 🔬 Detailed Research Analysis\n\n${article.content}`
+    : (article.editorial || article.content || "");
   const publishDate = article.publishedAt ? new Date(article.publishedAt) : new Date();
 
   return (
