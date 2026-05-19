@@ -24,6 +24,7 @@ interface ResearchDoc {
   slug?: string;
   coverImageUrl?: string;
   publishedAt?: { toDate?: () => Date; seconds?: number } | Date | string | null;
+  images?: { rings: string | null; morpho: string | null } | null;
 }
 
 function slugify(text: string): string {
@@ -57,7 +58,7 @@ function ArticleEditor({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"article" | "social">("article");
+  const [activeTab, setActiveTab] = useState<"article" | "social" | "assets">("article");
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
@@ -140,6 +141,15 @@ function ArticleEditor({
       setCopiedLinkedIn(true);
       setTimeout(() => setCopiedLinkedIn(false), 2000);
     }
+  };
+
+  const handleDownloadAsset = (base64Url: string, filename: string) => {
+    const link = document.createElement("a");
+    link.href = base64Url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (loading) {
@@ -233,7 +243,7 @@ function ArticleEditor({
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-8 pt-6">
         <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 w-fit mb-6">
-          {(["article", "social"] as const).map((tab) => (
+          {(["article", "social", "assets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -243,7 +253,7 @@ function ArticleEditor({
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              {tab === "article" ? "Article Editor" : "Social Posts"}
+              {tab === "article" ? "Article Editor" : tab === "social" ? "Social Posts" : "Assets & Images"}
             </button>
           ))}
         </div>
@@ -341,6 +351,52 @@ function ArticleEditor({
               </div>
               <div className="bg-slate-900 rounded-md p-4 text-slate-300 text-sm whitespace-pre-wrap">
                 {article.socials?.linkedin || "No LinkedIn post generated."}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "assets" && (
+          <div className="mb-12 space-y-8">
+            {/* Concentric Rings Image */}
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Three-Layer Concentric Rings</h3>
+                <button
+                  onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
+                  disabled={!article.images?.rings}
+                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                >
+                  Download PNG
+                </button>
+              </div>
+              <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
+                {article.images?.rings ? (
+                  <img src={article.images.rings} alt="Concentric Rings" className="max-w-full rounded-md shadow-lg" />
+                ) : (
+                  <p className="text-slate-500 italic">No image was captured by the Engine during export.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Morphokinetics Image */}
+            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-white">Morphokinetics Flow</h3>
+                <button
+                  onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}
+                  disabled={!article.images?.morpho}
+                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                >
+                  Download PNG
+                </button>
+              </div>
+              <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
+                {article.images?.morpho ? (
+                  <img src={article.images.morpho} alt="Morphokinetics" className="max-w-full rounded-md shadow-lg" />
+                ) : (
+                  <p className="text-slate-500 italic">No morphokinetics image was captured.</p>
+                )}
               </div>
             </div>
           </div>
