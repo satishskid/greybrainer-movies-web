@@ -6,6 +6,7 @@ const EDITOR_EMAILS = [
   "skids.social01@gmail.com",
   "saminamishra@gmail.com",
   "saminamisra@gmail.com",
+  "mousampatel816@gmail.com",
 ];
 
 export function normalizeEmail(email: string | null | undefined) {
