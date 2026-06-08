@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+  <title>Greybrainer Video</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 1920px;
+      height: 1080px;
+      background-color: #0d1117;
+      color: #c9d1d9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .background-gradient {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at center, #1f2937 0%, #0d1117 100%);
+      z-index: 0;
+    }
+    .logo {
+      position: absolute;
+      top: 40px;
+      left: 60px;
+      font-size: 36px;
+      font-weight: bold;
+      color: #fff;
+      z-index: 10;
+      opacity: 0.8;
+      letter-spacing: 2px;
+    }
+    .title {
+      font-size: 96px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 40px;
+      z-index: 10;
+      max-width: 1400px;
+      line-height: 1.2;
+    }
+    .chart-container {
+      position: absolute;
+      top: 250px;
+      width: 1200px;
+      height: 700px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      opacity: 0;
+    }
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
+</head>
+<body>
+  
+  <div class="background-gradient"></div>
+  <div class="logo">GREYBRAINER AI</div>
+  
+  <div class="title" id="main-title">{{MOVIE_TITLE}}</div>
+
+  <div class="chart-container" id="chart1">
+    <img src="rings.png" alt="Concentric Rings" onerror="this.style.display='none'">
+  </div>
+
+  <div class="chart-container" id="chart2">
+    <img src="morpho.png" alt="Morphokinetics" onerror="this.style.display='none'">
+  </div>
+
+  <!-- Audio track -->
+  <audio 
+    id="voiceover" 
+    data-start="0" 
+    data-track-index="0" 
+    src="voiceover.mp3">
+  </audio>
+
+  <script>
+    // We register the timeline for HyperFrames
+    const tl = gsap.timeline({ paused: true });
+    
+    // Animate title in
+    tl.from("#main-title", { opacity: 0, y: 50, duration: 1 }, 0.5);
+    
+    // Fade title out slightly later
+    tl.to("#main-title", { opacity: 0, y: -50, duration: 1 }, 5);
+    
+    // Show Rings chart
+    tl.fromTo("#chart1", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 1.5 }, 6);
+    tl.to("#chart1", { opacity: 0, duration: 1 }, 15);
+    
+    // Show Morpho chart
+    tl.fromTo("#chart2", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 1.5 }, 16);
+    tl.to("#chart2", { opacity: 0, duration: 1 }, 25);
+    
+    // Keep composition alive for 30s as a fallback (Hyperframes auto-stops when media ends or timeline completes)
+    tl.to({}, {duration: 5}, 30);
+
+    window.__timelines = window.__timelines || {};
+    window.__timelines.main = tl;
+  </script>
+</body>
+</html>
