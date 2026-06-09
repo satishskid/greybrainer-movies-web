@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
-import { GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithRedirect, signOut } from "firebase/auth";
+import { GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { Loader2, Lock, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { auth } from "@/lib/firebase";
@@ -43,7 +43,7 @@ export function HubAuthGate({ children }: HubAuthGateProps) {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      await signInWithRedirect(auth, provider);
+      await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Google sign-in failed:", error);
       setAuthError("Google sign-in failed. Please try again.");
