@@ -18,4 +18,5 @@ export interface SiteArticle {
   status: string;
   tags: string[];
   type: string;
+  youtubeScript?: string;
 }

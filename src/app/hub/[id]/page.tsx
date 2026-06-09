@@ -25,6 +25,7 @@ interface ResearchDoc {
   coverImageUrl?: string;
   publishedAt?: { toDate?: () => Date; seconds?: number } | Date | string | null;
   images?: { rings: string | null; morpho: string | null } | null;
+  youtubeScript?: string;
 }
 
 function slugify(text: string): string {
@@ -62,6 +63,7 @@ function ArticleEditor({
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
+  const [editedYoutubeScript, setEditedYoutubeScript] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [copiedTwitter, setCopiedTwitter] = useState(false);
   const [copiedLinkedIn, setCopiedLinkedIn] = useState(false);
@@ -76,6 +78,7 @@ function ArticleEditor({
           setArticle(data);
           setEditedEditorial(data.editorial || "");
           setEditedContent(data.content || "");
+          setEditedYoutubeScript(data.youtubeScript || "");
           setCoverImageUrl(data.coverImageUrl || "");
         }
       } catch (err) {
@@ -95,6 +98,7 @@ function ArticleEditor({
       await updateDoc(doc(db, "published_research", article.id), {
         editorial: editedEditorial,
         content: editedContent,
+        youtubeScript: editedYoutubeScript,
         coverImageUrl: coverImageUrl,
         updatedAt: new Date(),
       });
@@ -352,6 +356,26 @@ function ArticleEditor({
               <div className="bg-slate-900 rounded-md p-4 text-slate-300 text-sm whitespace-pre-wrap">
                 {article.socials?.linkedin || "No LinkedIn post generated."}
               </div>
+            </div>
+
+            {/* YouTube Script Editable */}
+            <div className="bg-slate-800 rounded-lg border border-red-500/30 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-red-400">YouTube Voiceover Script</h3>
+              </div>
+              {previewMode ? (
+                <div className="prose prose-invert prose-sm max-w-none bg-slate-900 rounded-lg p-6 border border-slate-700 overflow-y-auto">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{editedYoutubeScript || "No script generated."}</ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  value={editedYoutubeScript}
+                  onChange={(e) => setEditedYoutubeScript(e.target.value)}
+                  className="w-full h-64 bg-slate-900 border border-slate-700 rounded-lg p-6 text-slate-300 text-sm font-mono resize-y focus:outline-none focus:ring-1 focus:ring-red-500"
+                  placeholder="YouTube script..."
+                />
+              )}
+              <p className="text-xs text-slate-500 mt-2">Edit the script here. Pranit's local video generator will pull exactly what you save here for the voiceover.</p>
             </div>
           </div>
         )}
