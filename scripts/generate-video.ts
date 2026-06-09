@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
@@ -15,14 +14,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
 
 if (!ELEVENLABS_API_KEY) {
   console.error("❌ Missing ELEVENLABS_API_KEY in .env.local");
-  process.exit(1);
-}
-if (!GEMINI_API_KEY) {
-  console.error("❌ Missing VITE_GEMINI_API_KEY in .env.local");
   process.exit(1);
 }
 
@@ -35,9 +29,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-
 async function getArticle(id: string) {
   console.log(`\n🔍 Fetching article ${id} from Firebase...`);
   const snap = await getDoc(doc(db, "published_research", id));
@@ -47,33 +38,6 @@ async function getArticle(id: string) {
   return snap.data();
 }
 
-async function generateScriptWithGemini(markdown: string) {
-  console.log(`\n🧠 Generating YouTube script with Gemini...`);
-  
-  const prompt = `
-You are a top-tier YouTube film essayist. I will provide you with a raw, detailed AI movie analysis in Markdown.
-Your task is to convert this analysis into a compelling, 1-2 minute conversational voiceover script for a faceless YouTube video.
-
-IMPORTANT RULES:
-1. Make it sound natural, authoritative, and engaging.
-2. The tone should be like a premium video essay (think Nerdwriter or Lessons from the Screenplay).
-3. Do NOT include any stage directions, brackets, or visuals notes in the text. ONLY output the words the narrator will say.
-4. Keep the total word count around 200-250 words so it fits nicely in a short video.
-
-Here is the raw analysis:
-${markdown.substring(0, 3000)} // truncate to save tokens
-`;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0.7,
-    }
-  });
-
-  return response.text || "Failed to generate script.";
-}
 
 async function generateAudio(script: string, outputFilename: string) {
   console.log(`\n🎙️ Generating voiceover via ElevenLabs...`);
@@ -180,7 +144,11 @@ async function main() {
       console.warn("⚠️ Warning: No chart images found in this article. Visuals will be blank.");
     }
 
-    const script = await generateScriptWithGemini(article.content || '');
+    const script = article.youtubeScript;
+    if (!script) {
+      console.error("❌ Error: No youtubeScript found in this article. Please generate or write one in the Hub UI first.");
+      process.exit(1);
+    }
     console.log(`\n--- SCRIPT PREVIEW ---\n${script}\n----------------------`);
 
     const tempAudio = path.join(__dirname, '..', 'temp_voiceover.mp3');
