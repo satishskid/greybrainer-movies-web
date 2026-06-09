@@ -182,7 +182,22 @@ function ArticleEditor({
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-white">{article.title}</h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-xl font-bold text-white">{article.title}</h1>
+              <div className="flex items-center px-2 py-1 bg-slate-900 rounded border border-slate-700">
+                <span className="text-xs text-slate-400 mr-2">Content ID:</span>
+                <code className="text-indigo-400 font-mono text-xs">{article.id}</code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(article.id);
+                    alert("Content ID copied!");
+                  }}
+                  className="ml-2 text-[10px] bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded text-white transition-colors"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
             <div className="flex items-center space-x-3 mt-1">
               <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
                 article.status === "published"
