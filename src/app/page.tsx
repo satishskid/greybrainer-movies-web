@@ -88,12 +88,6 @@ export default function Home() {
               <Film className="w-5 h-5 mr-2" />
               Read Now
             </Link>
-            <Link
-              href="/hub"
-              className="bg-slate-600/60 backdrop-blur-md text-white px-8 py-3 rounded-md font-semibold hover:bg-slate-600/80 transition"
-            >
-              Writer Hub
-            </Link>
           </div>
         </div>
       </div>
@@ -330,8 +324,12 @@ export default function Home() {
               </nav>
             </div>
           </div>
-          <div className="mt-8 pt-6 border-t border-slate-800/50 text-center text-xs text-slate-500">
-            © {new Date().getFullYear()} Greybrainer. All rights reserved.
+          <div className="mt-8 pt-6 border-t border-slate-800/50 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
+            <div>© {new Date().getFullYear()} Greybrainer. All rights reserved.</div>
+            <div className="flex space-x-4 mt-4 md:mt-0 opacity-20 hover:opacity-100 transition-opacity">
+              <Link href="/hub">Writer Hub</Link>
+              <Link href="/engine">AI Engine</Link>
+            </div>
           </div>
         </footer>
       </div>
