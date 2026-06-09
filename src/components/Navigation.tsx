@@ -35,7 +35,6 @@ export function Navigation() {
         </a>
         <div className="hidden md:block h-5 w-px bg-slate-700" />
         <Search className="w-5 h-5 cursor-pointer hover:text-white transition" />
-        <Link href="/hub" className="hidden md:block text-sm font-semibold text-slate-200 hover:text-white transition">Writer Hub</Link>
       </div>
     </nav>
   );

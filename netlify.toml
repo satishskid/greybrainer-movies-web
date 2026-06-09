@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/engine/*"
+  to = "https://greybrainer-movie.netlify.app/:splat"
+  status = 200
+  force = true
