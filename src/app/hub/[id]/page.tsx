@@ -123,6 +123,7 @@ function ArticleEditor({
         slug: slug,
         editorial: editedEditorial,
         content: editedContent,
+        youtubeScript: editedYoutubeScript,
         coverImageUrl: coverImageUrl,
         publishedAt: new Date(),
         updatedAt: new Date(),
@@ -142,22 +143,20 @@ function ArticleEditor({
     if (type === "twitter") {
       setCopiedTwitter(true);
       setTimeout(() => setCopiedTwitter(false), 2000);
-    } finally {
-      setTimeout(() => {
-        setCopiedLinkedIn(false);
-        setCopiedTwitter(false);
-      }, 2000);
+    } else {
+      setCopiedLinkedIn(true);
+      setTimeout(() => setCopiedLinkedIn(false), 2000);
     }
   };
 
   const handleGenerateScript = async () => {
-    if (!article?.content) return;
+    if (!editedContent) return;
     setIsGeneratingScript(true);
     try {
       const response = await fetch('/api/generate-youtube-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: article.content }),
+        body: JSON.stringify({ content: editedContent }),
       });
       if (!response.ok) throw new Error("Failed to generate script");
       const data = await response.json();
