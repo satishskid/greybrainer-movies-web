@@ -1,6 +1,6 @@
 export type HubRole = "admin" | "editor";
 
-const ADMIN_EMAILS = ["satishskid@gmail.com"];
+const ADMIN_EMAILS = ["satishskid@gmail.com", "satish.rath@gmail.com"];
 
 const EDITOR_EMAILS = [
   "skids.social01@gmail.com",
