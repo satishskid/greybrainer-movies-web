@@ -68,6 +68,7 @@ function ArticleEditor({
   const [copiedTwitter, setCopiedTwitter] = useState(false);
   const [copiedLinkedIn, setCopiedLinkedIn] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
 
   useEffect(() => {
     async function fetchArticle() {
@@ -141,9 +142,31 @@ function ArticleEditor({
     if (type === "twitter") {
       setCopiedTwitter(true);
       setTimeout(() => setCopiedTwitter(false), 2000);
-    } else {
-      setCopiedLinkedIn(true);
-      setTimeout(() => setCopiedLinkedIn(false), 2000);
+    } finally {
+      setTimeout(() => {
+        setCopiedLinkedIn(false);
+        setCopiedTwitter(false);
+      }, 2000);
+    }
+  };
+
+  const handleGenerateScript = async () => {
+    if (!article?.content) return;
+    setIsGeneratingScript(true);
+    try {
+      const response = await fetch('/api/generate-youtube-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: article.content }),
+      });
+      if (!response.ok) throw new Error("Failed to generate script");
+      const data = await response.json();
+      setEditedYoutubeScript(data.script);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating script");
+    } finally {
+      setIsGeneratingScript(false);
     }
   };
 
@@ -377,6 +400,17 @@ function ArticleEditor({
             <div className="bg-slate-800 rounded-lg border border-red-500/30 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-red-400">YouTube Voiceover Script</h3>
+                <button
+                  onClick={handleGenerateScript}
+                  disabled={isGeneratingScript || !article?.content}
+                  className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white text-sm font-semibold rounded transition"
+                >
+                  {isGeneratingScript ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
+                  ) : (
+                    "Generate Script with Gemini"
+                  )}
+                </button>
               </div>
               {previewMode ? (
                 <div className="prose prose-invert prose-sm max-w-none bg-slate-900 rounded-lg p-6 border border-slate-700 overflow-y-auto">
