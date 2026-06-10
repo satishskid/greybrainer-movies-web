@@ -69,6 +69,18 @@ function ArticleEditor({
   const [copiedLinkedIn, setCopiedLinkedIn] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [geminiKey, setGeminiKey] = useState("");
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem("gemini_api_key");
+    if (savedKey) setGeminiKey(savedKey);
+  }, []);
+
+  const handleGeminiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setGeminiKey(val);
+    localStorage.setItem("gemini_api_key", val);
+  };
 
   useEffect(() => {
     async function fetchArticle() {
@@ -151,12 +163,16 @@ function ArticleEditor({
 
   const handleGenerateScript = async () => {
     if (!editedContent) return;
+    if (!geminiKey && !process.env.NEXT_PUBLIC_ALLOW_GLOBAL_GEMINI) {
+      alert("Please enter your Gemini API Key below.");
+      return;
+    }
     setIsGeneratingScript(true);
     try {
       const response = await fetch('/api/generate-youtube-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editedContent }),
+        body: JSON.stringify({ content: editedContent, apiKey: geminiKey }),
       });
       if (!response.ok) throw new Error("Failed to generate script");
       const data = await response.json();
@@ -397,7 +413,17 @@ function ArticleEditor({
 
             {/* YouTube Script Editable */}
             <div className="bg-slate-800 rounded-lg border border-red-500/30 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-300 mb-1">Your Gemini API Key (Saved Locally)</label>
+                <input
+                  type="password"
+                  value={geminiKey}
+                  onChange={handleGeminiKeyChange}
+                  placeholder="AIzaSy..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+              <div className="flex items-center justify-between mb-4 mt-6">
                 <h3 className="text-lg font-bold text-red-400">YouTube Voiceover Script</h3>
                 <button
                   onClick={handleGenerateScript}

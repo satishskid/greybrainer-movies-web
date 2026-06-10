@@ -3,18 +3,18 @@ import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request: Request) {
   try {
-    const { content } = await request.json();
+    const { content, apiKey } = await request.json();
 
     if (!content) {
       return NextResponse.json({ error: "No content provided" }, { status: 400 });
     }
 
-    const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "Gemini API key is not configured" }, { status: 500 });
+    const finalApiKey = apiKey || process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    if (!finalApiKey) {
+      return NextResponse.json({ error: "Gemini API key is missing. Please provide it in the UI." }, { status: 400 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: finalApiKey });
 
     const prompt = `
 You are a top-tier YouTube film essayist. I will provide you with a raw, detailed AI movie analysis in Markdown.
