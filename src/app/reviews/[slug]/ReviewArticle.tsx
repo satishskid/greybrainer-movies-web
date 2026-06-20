@@ -172,6 +172,34 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
           </section>
         )}
 
+        {article.diagnosticImages.length > 0 && (
+          <section className="mb-12">
+            <div className="mb-4">
+              <span className="text-xs font-semibold uppercase tracking-wider text-teal-300">
+                Greybrainer Diagnostic Visuals
+              </span>
+              <h2 className="mt-2 text-2xl font-bold text-white">
+                Three-layer and Morphokinetics read
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {article.diagnosticImages.map((image) => (
+                <figure
+                  key={image.url}
+                  className="rounded-lg border border-slate-800 bg-slate-950/60 p-4"
+                >
+                  <img
+                    src={image.url}
+                    alt={`${article.title} ${image.label}`}
+                    className="w-full rounded-md object-contain"
+                  />
+                  <figcaption className="mt-3 text-sm text-slate-400">{image.label}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+
         {article.inlineImageUrls.length > 0 && (
           <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-4">
             {article.inlineImageUrls.slice(0, 4).map((imageUrl, index) => (

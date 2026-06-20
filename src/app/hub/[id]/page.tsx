@@ -374,6 +374,15 @@ function ArticleEditor({
     document.body.removeChild(link);
   };
 
+  const addAssetToInlineImages = (url: string) => {
+    setInlineImageUrls((current) => {
+      const existing = linesToArray(current);
+      if (existing.includes(url)) return current;
+      return [...existing, url].join("\n");
+    });
+    setSaveMsg("Added to article visuals. Save draft to keep it.");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -879,15 +888,25 @@ function ArticleEditor({
           <div className="mb-12 space-y-8">
             {/* Concentric Rings Image */}
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-bold text-white">Three-Layer Concentric Rings</h3>
-                <button
-                  onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
-                  disabled={!article.images?.rings}
-                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
-                >
-                  Download PNG
-                </button>
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                  <button
+                    onClick={() => article.images?.rings && addAssetToInlineImages(article.images.rings)}
+                    disabled={!article.images?.rings}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add to Article Visuals
+                  </button>
+                  <button
+                    onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
+                    disabled={!article.images?.rings}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    Download PNG
+                  </button>
+                </div>
               </div>
               <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
                 {article.images?.rings ? (
@@ -900,15 +919,25 @@ function ArticleEditor({
 
             {/* Morphokinetics Image */}
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-bold text-white">Morphokinetics Flow</h3>
-                <button
-                  onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}
-                  disabled={!article.images?.morpho}
-                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
-                >
-                  Download PNG
-                </button>
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                  <button
+                    onClick={() => article.images?.morpho && addAssetToInlineImages(article.images.morpho)}
+                    disabled={!article.images?.morpho}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add to Article Visuals
+                  </button>
+                  <button
+                    onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}
+                    disabled={!article.images?.morpho}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    Download PNG
+                  </button>
+                </div>
               </div>
               <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
                 {article.images?.morpho ? (

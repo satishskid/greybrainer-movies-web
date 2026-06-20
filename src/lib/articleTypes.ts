@@ -5,6 +5,11 @@ export interface ArticleFaq {
   answer: string;
 }
 
+export interface ArticleDiagnosticImage {
+  label: string;
+  url: string;
+}
+
 export interface SiteArticle {
   id: string;
   title: string;
@@ -38,4 +43,5 @@ export interface SiteArticle {
   faqs: ArticleFaq[];
   relatedSlugs: string[];
   inlineImageUrls: string[];
+  diagnosticImages: ArticleDiagnosticImage[];
 }

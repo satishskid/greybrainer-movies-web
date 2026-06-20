@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = article.seoTitle || `${article.title} Review`;
   const description = article.seoDescription || article.verdict || article.excerpt || SITE_DESCRIPTION;
   const canonical = `/reviews/${article.slug}`;
+  const images = articleImageUrls(article);
 
   return {
     title,
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: absoluteUrl(canonical),
-      images: article.coverImageUrl ? [article.coverImageUrl] : [],
+      images,
       type: "article",
       publishedTime: article.publishedAt || undefined,
       authors: [article.createdBy || SITE_BRAND],
@@ -39,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       card: "summary_large_image",
       title,
       description,
-      images: article.coverImageUrl ? [article.coverImageUrl] : [],
+      images,
     },
   };
 }
@@ -84,6 +85,14 @@ function getRelatedArticles(article: SiteArticle, articles: SiteArticle[]) {
   return [...selected, ...fallback].slice(0, 3);
 }
 
+function articleImageUrls(article: SiteArticle) {
+  return [
+    article.coverImageUrl,
+    ...article.diagnosticImages.map((image) => image.url),
+    ...article.inlineImageUrls,
+  ].filter((url): url is string => Boolean(url));
+}
+
 function parseRating(score?: string) {
   if (!score) return null;
   const match = score.match(/\d+(?:\.\d+)?/);
@@ -105,7 +114,7 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
     headline: article.searchHeadline || article.title,
     name: article.title,
     description: toPlainText(description || SITE_DESCRIPTION, 240),
-    image: [article.coverImageUrl, ...article.inlineImageUrls].filter(Boolean),
+    image: articleImageUrls(article),
     datePublished: publishedDate,
     dateModified: publishedDate,
     author: {

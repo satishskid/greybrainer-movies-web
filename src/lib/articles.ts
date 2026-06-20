@@ -1,7 +1,7 @@
 import { collection, getDocs, limit as firestoreLimit, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import lensArchiveData from "@/data/lensArchive.json";
-import type { ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import type { ArticleDiagnosticImage, ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
 const DEFAULT_ARCHIVE_LIMIT = 220;
@@ -255,6 +255,25 @@ function normalizeFaqs(value: unknown): ArticleFaq[] {
     .filter((item): item is ArticleFaq => Boolean(item));
 }
 
+function normalizeDiagnosticImages(value: unknown): ArticleDiagnosticImage[] {
+  if (!value || typeof value !== "object") return [];
+
+  const images = value as { rings?: unknown; morpho?: unknown };
+  const normalized: ArticleDiagnosticImage[] = [];
+  const rings = optionalString(images.rings);
+  const morpho = optionalString(images.morpho);
+
+  if (rings) {
+    normalized.push({ label: "Three-Layer Concentric Rings", url: rings });
+  }
+
+  if (morpho) {
+    normalized.push({ label: "Morphokinetics Flow", url: morpho });
+  }
+
+  return normalized;
+}
+
 function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteArticle {
   const title = String(data.title ?? "Untitled");
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
@@ -296,6 +315,7 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     faqs: normalizeFaqs(data.faqs),
     relatedSlugs: stringArray(data.relatedSlugs),
     inlineImageUrls: stringArray(data.inlineImageUrls),
+    diagnosticImages: normalizeDiagnosticImages(data.images),
   };
 }
 
@@ -334,6 +354,7 @@ function normalizeFeedItem(itemXml: string, index: number): SiteArticle | null {
     faqs: [],
     relatedSlugs: [],
     inlineImageUrls: [],
+    diagnosticImages: [],
   };
 }
 
@@ -363,6 +384,7 @@ function normalizeStaticArchiveEntry(entry: LensArchiveEntry): SiteArticle {
     faqs: [],
     relatedSlugs: [],
     inlineImageUrls: [],
+    diagnosticImages: [],
   };
 }
 
