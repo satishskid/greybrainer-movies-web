@@ -2,9 +2,8 @@
 
 import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
@@ -93,10 +92,6 @@ function normalizeSlug(value: string) {
 
 function cleanFaqs(faqs: ArticleFaq[]) {
   return faqs.filter((faq) => faq.question.trim() && faq.answer.trim());
-}
-
-function safeAssetName(name: string) {
-  return name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/(^-|-$)+/g, "");
 }
 
 export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -295,21 +290,33 @@ function ArticleEditor({
     setUploadingAsset(true);
     setSaveMsg("");
     try {
-      const storageRef = ref(
-        storage,
-        `article-assets/${article.id}/${Date.now()}-${safeAssetName(file.name)}`,
-      );
-      await uploadBytes(storageRef, file, { contentType: file.type });
-      const url = await getDownloadURL(storageRef);
+      const formData = new FormData();
+      formData.append("draftId", article.id);
+      formData.append("kind", target);
+      formData.append("file", file);
+
+      const token = await user.getIdToken();
+      const response = await fetch("/api/r2-upload", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const payload = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !payload.url) {
+        throw new Error(payload.error || "R2 upload failed.");
+      }
+
+      const url = payload.url;
       if (target === "cover") {
         setCoverImageUrl(url);
       } else {
         setInlineImageUrls((current) => (current ? `${current}\n${url}` : url));
       }
-      setSaveMsg("Image uploaded. Save draft to keep it.");
+      setSaveMsg("Image uploaded to R2. Save draft to keep it.");
     } catch (error) {
       console.error("Image upload failed:", error);
-      setSaveMsg("Image upload failed. Check Firebase Storage rules.");
+      setSaveMsg(error instanceof Error ? error.message : "Image upload failed.");
     } finally {
       setUploadingAsset(false);
     }
