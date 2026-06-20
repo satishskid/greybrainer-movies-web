@@ -32,9 +32,9 @@ The Hub is responsible for:
 - Refining engine-generated deep review drafts.
 - Uploading cover and inline images to R2.
 - Publishing articles to the public website.
-- Preparing manual social copy for Medium, LinkedIn, X, Instagram, and Facebook.
+- Preparing a manual social pack for Medium, LinkedIn, X, Instagram, and Facebook.
 
-Social posting is manual for now.
+Social posting is manual for now. The Hub generates copyable LinkedIn insight posts, carousel slide copy, X posts, Instagram carousel captions, Reel scripts, Facebook discussion posts, Medium notes, hashtags, image alt text, and UTM-tracked links.
 
 ## Engine Bridge
 
@@ -77,4 +77,3 @@ Production deploy after the workflow hardening release:
 
 - Commit: `7eae2c4`
 - URL: https://movies.greybrain.in
-
