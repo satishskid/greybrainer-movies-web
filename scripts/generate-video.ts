@@ -29,13 +29,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-async function getArticle(id: string) {
+interface VideoArticle {
+  title?: string;
+  youtubeScript?: string;
+  images?: {
+    rings?: string;
+    morpho?: string;
+  };
+}
+
+async function getArticle(id: string): Promise<VideoArticle> {
   console.log(`\n🔍 Fetching article ${id} from Firebase...`);
   const snap = await getDoc(doc(db, "published_research", id));
   if (!snap.exists()) {
     throw new Error(`Article ${id} not found.`);
   }
-  return snap.data();
+  return snap.data() as VideoArticle;
 }
 
 
@@ -71,7 +80,7 @@ async function generateAudio(script: string, outputFilename: string) {
   console.log(`✅ Audio saved to ${outputFilename}`);
 }
 
-async function prepareHyperFramesProject(article: any, scriptText: string, audioFile: string) {
+async function prepareHyperFramesProject(article: VideoArticle, scriptText: string, audioFile: string) {
   console.log(`\n🎬 Assembling HyperFrames project...`);
   const projectDir = path.join(__dirname, '..', '.video-build');
   
