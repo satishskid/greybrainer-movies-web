@@ -47,13 +47,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ReviewPage({ params }: Props) {
   const { slug } = await params;
-  const articles = await getAllArticles();
-  const article = articles.find((item) => item.slug === slug) ?? null;
+  const article = await getArticleBySlug(slug);
 
   if (!article) {
     notFound();
   }
 
+  const articles = await getAllArticles();
   const relatedArticles = getRelatedArticles(article, articles);
   const jsonLd = buildArticleJsonLd(article, relatedArticles);
 
