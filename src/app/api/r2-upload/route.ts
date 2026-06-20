@@ -33,6 +33,10 @@ function getWorkerApiBaseUrl() {
   return configured.replace(/\/$/, "");
 }
 
+function getWorkerUploadToken() {
+  return process.env.OMNICHANNEL_UPLOAD_TOKEN || process.env.ASSET_UPLOAD_TOKEN || "";
+}
+
 function getBearerToken(request: Request) {
   const authorization = request.headers.get("authorization") || "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -105,9 +109,15 @@ export async function POST(request: Request) {
   workerFormData.append("draftId", draftId);
   workerFormData.append("kind", kind);
   workerFormData.append("file", file, file.name || "asset");
+  const uploadToken = getWorkerUploadToken();
+
+  if (!uploadToken) {
+    return NextResponse.json({ error: "R2 upload token is not configured." }, { status: 500 });
+  }
 
   const response = await fetch(`${getWorkerApiBaseUrl()}/assets/upload`, {
     method: "POST",
+    headers: { authorization: `Bearer ${uploadToken}` },
     body: workerFormData,
   });
   const payload = await readWorkerResponse(response);
