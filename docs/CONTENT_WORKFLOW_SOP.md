@@ -37,7 +37,7 @@ If sign-in fails, first check Firebase Authentication authorized domains and the
 2. Writer opens https://movies.greybrain.in/hub.
 3. Writer creates a new manual draft in Hub.
 4. Writer pastes the newsletter content.
-5. Writer adds a cover image and any inline images.
+5. Writer adds a cover image and any inline images in the New Draft modal, or later from the editor if needed.
 6. Writer checks the SEO tab:
    - Search headline.
    - SEO title.
