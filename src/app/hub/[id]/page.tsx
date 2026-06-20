@@ -98,6 +98,22 @@ function isBriefType(type: string) {
   return type === "daily_brief" || type === "daily-brief" || type.includes("brief");
 }
 
+function trackedUrl(baseUrl: string, source: string, campaign: string) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "social");
+  url.searchParams.set("utm_campaign", campaign);
+  return url.toString();
+}
+
+function fallbackText(value: string, fallback: string, maxLength?: number) {
+  return plainText(value, maxLength) || fallback;
+}
+
+function bulletLines(lines: string[]) {
+  return lines.filter(Boolean).map((line) => `- ${line}`).join("\n");
+}
+
 export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <HubAuthGate>
@@ -402,23 +418,87 @@ function ArticleEditor({
 
   const liveSlug = article.slug || slugify(searchHeadline || article.title);
   const liveUrl = `${PUBLIC_SITE_URL}/reviews/${liveSlug}`;
-  const socialDrafts = {
-    linkedin:
-      article.socials?.linkedin ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer reads the film through story signal, craft execution, audience pulse, and Morphokinetics.\n\nRead the full review: ${liveUrl}`,
-    twitter:
-      article.socials?.twitter ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 170)}\n\nFull Greybrainer review: ${liveUrl}`,
-    instagram:
-      article.socials?.instagram ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer Lens: story, craft, audience pulse, Morphokinetics.\n\nLink in bio / full review: ${liveUrl}\n\n#Greybrainer #MovieReview #Cinema`,
-    facebook:
-      article.socials?.facebook ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 240)}\n\nRead the complete Greybrainer review: ${liveUrl}`,
-    medium:
-      article.socials?.medium ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 260)}\n\nOriginally published on Greybrainer Movies: ${liveUrl}`,
+  const campaign = liveSlug || slugify(article.title);
+  const titleForSocial = searchHeadline || article.title;
+  const sourceText = editedEditorial || editedContent || article.content || article.title;
+  const isBrief = isBriefType(article.type);
+  const socialVerdict = fallbackText(
+    verdict,
+    firstWords(sourceText, 50) || `A Greybrainer reading of ${article.title}.`,
+    320,
+  );
+  const compactVerdict = plainText(socialVerdict, 170);
+  const watchLine = fallbackText(
+    whoShouldWatch,
+    isBrief
+      ? "For readers tracking the movie and OTT conversation through a sharper Greybrainer lens."
+      : "For viewers who want a sharper read on story signal, craft, and audience energy.",
+    220,
+  );
+  const producerLine = fallbackText(
+    producerInsight,
+    isBrief
+      ? "The useful signal for makers is audience appetite, tonal movement, and where the conversation may move next."
+      : "The useful signal for makers is where the film's intent lands, where craft amplifies it, and where audience energy may shift.",
+    260,
+  );
+  const morphoLine = fallbackText(
+    morphokineticsTeaser,
+    "Morphokinetics reads attention, tension, release, and emotional momentum without exposing the internal scoring model.",
+    260,
+  );
+  const scoreRows = [
+    storyScore.trim() ? `Story/Script: ${storyScore.trim()}` : "",
+    conceptScore.trim() ? `Concept: ${conceptScore.trim()}` : "",
+    executionScore.trim() ? `Execution: ${executionScore.trim()}` : "",
+    overallScore.trim() ? `Overall: ${overallScore.trim()}` : "",
+  ].filter(Boolean);
+  const scoreBlock = scoreRows.length
+    ? bulletLines(scoreRows)
+    : "- Three-layer score: fill Story/Script, Concept, Execution, and Overall before posting.";
+  const hashtags = isBrief
+    ? "#Greybrainer #OTT #Cinema #FilmIndustry #AudienceInsights"
+    : "#Greybrainer #MovieReview #Cinema #FilmIndustry #AudienceInsights";
+  const channelLinks = {
+    linkedin: trackedUrl(liveUrl, "linkedin", campaign),
+    instagram: trackedUrl(liveUrl, "instagram", campaign),
+    facebook: trackedUrl(liveUrl, "facebook", campaign),
+    twitter: trackedUrl(liveUrl, "x", campaign),
+    medium: trackedUrl(liveUrl, "medium", campaign),
   };
+  const socialDefaults = {
+    linkedin:
+      `Most reviews ask whether ${article.title} is good.\nGreybrainer asks what kind of audience energy it creates.\n\n${socialVerdict}\n\nThree signals:\n${scoreBlock}\n\nProducer/director signal:\n${producerLine}\n\nWhat would you rather know before watching: the rating, or where attention starts shifting?\n\nRead the full review: ${channelLinks.linkedin}\n\n${hashtags}`,
+    linkedinCarousel:
+      `Slide 1\n${titleForSocial}\nNot just a rating. A reading of audience signal.\n\nSlide 2\n50-word verdict\n${socialVerdict}\n\nSlide 3\nWho should watch\n${watchLine}\n\nSlide 4\nThree-layer Greybrainer score\n${scoreBlock}\n\nSlide 5\nMorphokinetics teaser\n${morphoLine}\n\nSlide 6\nProducer/director insight\n${producerLine}\n\nSlide 7\nRead the full review\n${channelLinks.linkedin}`,
+    twitter:
+      `${plainText(article.title, 60)}: most reviews stop at good or bad. Greybrainer reads the audience signal.\n\n${compactVerdict}\n\nFull review: ${channelLinks.twitter}\n\n#Greybrainer`,
+    instagram:
+      `Are you watching ${article.title} for story, sensation, or aftertaste?\n\n${socialVerdict}\n\nCarousel slides:\n1. ${plainText(titleForSocial, 80)}\n2. The 50-word verdict\n3. Who should watch this\n4. Three-layer score\n5. Morphokinetics teaser\n6. Producer/director signal\n\nSave this for your watchlist. Link in bio/story: ${channelLinks.instagram}\n\n${hashtags}`,
+    instagramReel:
+      `0-3 sec\nMost reviews ask if ${article.title} is good. Greybrainer asks what it does to attention.\n\n3-12 sec\n${compactVerdict}\n\n12-22 sec\nThree-layer signal:\n${scoreBlock}\n\n22-30 sec\n${morphoLine}\n\nCaption\n${plainText(titleForSocial, 90)}\n${hashtags}\nLink in bio/story: ${channelLinks.instagram}`,
+    facebook:
+      `What did ${article.title} leave behind: emotion, adrenaline, thought, or silence?\n\n${socialVerdict}\n\nGreybrainer reads the film through story signal, craft execution, audience pulse, and Morphokinetics.\n\nQuestion for viewers: did the film hold your attention all the way through, or did it dip somewhere?\n\nRead the complete review: ${channelLinks.facebook}`,
+    medium:
+      `${titleForSocial}\n\n${socialVerdict}\n\nThis is the canonical Greybrainer Movies version, with SEO metadata, FAQ, three-layer scoring, Morphokinetics teaser, and producer/director insight.\n\nCanonical review: ${channelLinks.medium}`,
+    hashtags,
+    altText:
+      `Cover image alt text\n${article.title} cover image for a Greybrainer movie analysis.\n\nThree-layer image alt text\n${article.title} Greybrainer three-layer score visualization covering story/script, concept, execution, and overall signal.\n\nMorphokinetics image alt text\n${article.title} Morphokinetics visualization showing attention, emotional momentum, tension, and release patterns.`,
+    trackedLinks:
+      `LinkedIn\n${channelLinks.linkedin}\n\nInstagram bio/story\n${channelLinks.instagram}\n\nFacebook\n${channelLinks.facebook}\n\nX\n${channelLinks.twitter}\n\nMedium canonical note\n${channelLinks.medium}`,
+  };
+  const socialOutputs = [
+    { channel: "linkedin", label: "LinkedIn Insight Post", text: article.socials?.linkedin || socialDefaults.linkedin },
+    { channel: "linkedin-carousel", label: "LinkedIn Carousel / PDF Slides", text: socialDefaults.linkedinCarousel },
+    { channel: "twitter", label: "X / Twitter Post", text: article.socials?.twitter || socialDefaults.twitter },
+    { channel: "instagram", label: "Instagram Carousel Caption", text: article.socials?.instagram || socialDefaults.instagram },
+    { channel: "instagram-reel", label: "Instagram Reel Script", text: socialDefaults.instagramReel },
+    { channel: "facebook", label: "Facebook Discussion Post", text: article.socials?.facebook || socialDefaults.facebook },
+    { channel: "medium", label: "Medium Syndication Note", text: article.socials?.medium || socialDefaults.medium },
+    { channel: "hashtags", label: "Hashtag Set", text: socialDefaults.hashtags },
+    { channel: "alt-text", label: "Image Alt Text", text: socialDefaults.altText },
+    { channel: "tracked-links", label: "Tracked Links", text: socialDefaults.trackedLinks },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
@@ -817,13 +897,7 @@ function ArticleEditor({
 
         {activeTab === "social" && (
           <div className="mb-12 space-y-8">
-            {[
-              ["linkedin", "LinkedIn Post", socialDrafts.linkedin],
-              ["twitter", "X / Twitter Post", socialDrafts.twitter],
-              ["instagram", "Instagram Caption", socialDrafts.instagram],
-              ["facebook", "Facebook Post", socialDrafts.facebook],
-              ["medium", "Medium Syndication Note", socialDrafts.medium],
-            ].map(([channel, label, text]) => (
+            {socialOutputs.map(({ channel, label, text }) => (
               <div key={channel} className="bg-slate-800 rounded-lg border border-slate-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-white">{label}</h3>

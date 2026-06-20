@@ -47,7 +47,7 @@ If sign-in fails, first check Firebase Authentication authorized domains and the
 7. Writer previews the article.
 8. Writer publishes to the website.
 9. Writer opens the Social tab.
-10. Writer manually copies and posts the prepared social text to Medium, LinkedIn, X, Instagram, and Facebook.
+10. Writer manually copies and posts the prepared channel pack from the Hub Social tab to Medium, LinkedIn, X, Instagram, and Facebook.
 
 The daily newsletter is intentionally writer-led. Do not run it through the Engine unless the writer specifically asks for a deep review topic to be analyzed.
 
@@ -64,7 +64,7 @@ The daily newsletter is intentionally writer-led. Do not run it through the Engi
 9. Writer opens the new engine draft.
 10. Writer edits the article into final website format.
 11. Writer publishes to the website.
-12. Writer manually posts the channel-specific social copy from the Hub Social tab.
+12. Writer manually posts the channel-specific social pack from the Hub Social tab.
 
 ## Required Deep Review Format
 
@@ -109,7 +109,17 @@ Every published deep review should include:
 - Published website pages read from Firebase.
 - Engine drafts appear in Writer Hub.
 - Engine diagnostic images travel into Hub and public articles.
-- Hub prepares channel-specific social copy.
+- Hub prepares a channel-specific social pack:
+  - LinkedIn insight post.
+  - LinkedIn carousel/PDF slide copy.
+  - X post.
+  - Instagram carousel caption.
+  - Instagram Reel script.
+  - Facebook discussion post.
+  - Medium syndication note.
+  - Hashtag set.
+  - Image alt text.
+  - UTM-tracked links.
 - SEO metadata and JSON-LD are generated from article fields.
 - Canonicals, Open Graph URLs, robots Host, and sitemap point to `https://movies.greybrain.in`.
 
@@ -125,7 +135,7 @@ Every published deep review should include:
 - FAQs are filled.
 - Related links are added when available.
 - Preview looks clean on article page.
-- Social tab copy is ready before manual posting.
+- Social tab channel pack is ready before manual posting.
 
 ## Release Notes
 
@@ -135,4 +145,3 @@ Workflow hardening release on 2026-06-20:
 - Engine released at commit `cf3fcad`.
 - R2 remains canonical asset storage.
 - Cloudflare Images reviewed and deferred as a later optimization layer.
-
