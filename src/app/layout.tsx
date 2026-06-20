@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Navigation } from "@/components/Navigation";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,8 +16,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Greybrainer Movies | Deep AI Film Analysis",
-  description: "Comprehensive cinematic research, deep reviews, and morphokinetic breakdowns powered by the Greybrainer Methodology.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} | Deep AI Film Analysis`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: `${SITE_NAME} | Deep AI Film Analysis`,
+    description: SITE_DESCRIPTION,
+    url: absoluteUrl("/"),
+    siteName: SITE_NAME,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} | Deep AI Film Analysis`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({

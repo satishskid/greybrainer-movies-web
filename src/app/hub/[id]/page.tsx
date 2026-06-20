@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import type { User } from "firebase/auth";
-import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck } from "lucide-react";
+import { db, storage } from "@/lib/firebase";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { HubAuthGate } from "@/components/HubAuthGate";
 import type { HubRole } from "@/lib/hubRoles";
+
+interface ArticleFaq {
+  question: string;
+  answer: string;
+}
 
 interface ResearchDoc {
   id: string;
@@ -17,7 +23,7 @@ interface ResearchDoc {
   type: string;
   content: string;
   editorial: string | null;
-  socials: { twitter?: string; linkedin?: string } | null;
+  socials: { twitter?: string; linkedin?: string; instagram?: string; facebook?: string; medium?: string } | null;
   createdAt: { toDate?: () => Date } | null;
   status: string;
   createdBy: string;
@@ -26,7 +32,23 @@ interface ResearchDoc {
   publishedAt?: { toDate?: () => Date; seconds?: number } | Date | string | null;
   images?: { rings: string | null; morpho: string | null } | null;
   youtubeScript?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  searchHeadline?: string;
+  verdict?: string;
+  whoShouldWatch?: string;
+  storyScore?: string;
+  conceptScore?: string;
+  executionScore?: string;
+  overallScore?: string;
+  morphokineticsTeaser?: string;
+  producerInsight?: string;
+  faqs?: ArticleFaq[];
+  relatedSlugs?: string[];
+  inlineImageUrls?: string[];
 }
+
+const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://greybrainer-movies.netlify.app").replace(/\/$/, "");
 
 function slugify(text: string): string {
   return text
@@ -35,11 +57,64 @@ function slugify(text: string): string {
     .replace(/(^-|-$)+/g, "");
 }
 
+function plainText(value: string, maxLength?: number) {
+  const text = value
+    .replace(/!\[[^\]]*]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+    .replace(/[#*_`>~|-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!maxLength || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).replace(/\s+\S*$/, "").trim()}...`;
+}
+
+function firstWords(value: string, maxWords: number) {
+  return plainText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(" ");
+}
+
+function linesToArray(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function normalizeSlug(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    return slugify(parsed.pathname.split("/").filter(Boolean).at(-1) || trimmed);
+  } catch {
+    return slugify(trimmed.replace(/^\/?reviews\//, ""));
+  }
+}
+
+function cleanFaqs(faqs: ArticleFaq[]) {
+  return faqs.filter((faq) => faq.question.trim() && faq.answer.trim());
+}
+
+function safeAssetName(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/(^-|-$)+/g, "");
+}
+
 export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <HubAuthGate>
       {(session) => <ArticleEditor params={params} {...session} />}
     </HubAuthGate>
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-800/60 p-4">
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        {label}
+      </span>
+      {children}
+    </div>
   );
 }
 
@@ -59,21 +134,37 @@ function ArticleEditor({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"article" | "social" | "assets">("article");
+  const [uploadingAsset, setUploadingAsset] = useState(false);
+  const [activeTab, setActiveTab] = useState<"article" | "seo" | "social" | "assets">("article");
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
   const [editedYoutubeScript, setEditedYoutubeScript] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
-  const [copiedTwitter, setCopiedTwitter] = useState(false);
-  const [copiedLinkedIn, setCopiedLinkedIn] = useState(false);
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
+  const [searchHeadline, setSearchHeadline] = useState("");
+  const [verdict, setVerdict] = useState("");
+  const [whoShouldWatch, setWhoShouldWatch] = useState("");
+  const [storyScore, setStoryScore] = useState("");
+  const [conceptScore, setConceptScore] = useState("");
+  const [executionScore, setExecutionScore] = useState("");
+  const [overallScore, setOverallScore] = useState("");
+  const [morphokineticsTeaser, setMorphokineticsTeaser] = useState("");
+  const [producerInsight, setProducerInsight] = useState("");
+  const [faqs, setFaqs] = useState<ArticleFaq[]>([{ question: "", answer: "" }]);
+  const [inlineImageUrls, setInlineImageUrls] = useState("");
+  const [relatedSlugs, setRelatedSlugs] = useState("");
+  const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [geminiKey, setGeminiKey] = useState("");
 
   useEffect(() => {
-    const savedKey = localStorage.getItem("gemini_api_key");
-    if (savedKey) setGeminiKey(savedKey);
+    window.setTimeout(() => {
+      const savedKey = localStorage.getItem("gemini_api_key");
+      if (savedKey) setGeminiKey(savedKey);
+    }, 0);
   }, []);
 
   const handleGeminiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +184,21 @@ function ArticleEditor({
           setEditedContent(data.content || "");
           setEditedYoutubeScript(data.youtubeScript || "");
           setCoverImageUrl(data.coverImageUrl || "");
+          const sourceText = data.editorial || data.content || "";
+          setSearchHeadline(data.searchHeadline || data.title);
+          setSeoTitle(data.seoTitle || `${data.title} Review: Greybrainer Three-Layer Analysis`);
+          setSeoDescription(data.seoDescription || plainText(sourceText, 155));
+          setVerdict(data.verdict || firstWords(sourceText, 50));
+          setWhoShouldWatch(data.whoShouldWatch || "");
+          setStoryScore(data.storyScore || "");
+          setConceptScore(data.conceptScore || "");
+          setExecutionScore(data.executionScore || "");
+          setOverallScore(data.overallScore || "");
+          setMorphokineticsTeaser(data.morphokineticsTeaser || "");
+          setProducerInsight(data.producerInsight || "");
+          setFaqs(data.faqs?.length ? data.faqs : [{ question: "", answer: "" }]);
+          setInlineImageUrls((data.inlineImageUrls || []).join("\n"));
+          setRelatedSlugs((data.relatedSlugs || []).join("\n"));
         }
       } catch (err) {
         console.error("Failed to load article:", err);
@@ -103,17 +209,35 @@ function ArticleEditor({
     fetchArticle();
   }, [id]);
 
+  const buildPublishPayload = () => ({
+    editorial: editedEditorial,
+    content: editedContent,
+    youtubeScript: editedYoutubeScript,
+    coverImageUrl,
+    seoTitle,
+    seoDescription,
+    searchHeadline,
+    verdict,
+    whoShouldWatch,
+    storyScore,
+    conceptScore,
+    executionScore,
+    overallScore,
+    morphokineticsTeaser,
+    producerInsight,
+    faqs: cleanFaqs(faqs),
+    inlineImageUrls: linesToArray(inlineImageUrls),
+    relatedSlugs: linesToArray(relatedSlugs).map(normalizeSlug).filter(Boolean),
+    updatedAt: new Date(),
+  });
+
   const handleSave = async () => {
     if (!article) return;
     setSaving(true);
     setSaveMsg("");
     try {
       await updateDoc(doc(db, "published_research", article.id), {
-        editorial: editedEditorial,
-        content: editedContent,
-        youtubeScript: editedYoutubeScript,
-        coverImageUrl: coverImageUrl,
-        updatedAt: new Date(),
+        ...buildPublishPayload(),
       });
       setSaveMsg("Saved!");
       setTimeout(() => setSaveMsg(""), 3000);
@@ -129,16 +253,12 @@ function ArticleEditor({
     if (!article) return;
     setPublishing(true);
     try {
-      const slug = article.slug || slugify(article.title);
+      const slug = article.slug || slugify(searchHeadline || article.title);
       await updateDoc(doc(db, "published_research", article.id), {
+        ...buildPublishPayload(),
         status: "published",
-        slug: slug,
-        editorial: editedEditorial,
-        content: editedContent,
-        youtubeScript: editedYoutubeScript,
-        coverImageUrl: coverImageUrl,
         publishedAt: new Date(),
-        updatedAt: new Date(),
+        slug,
       });
       setArticle((prev) => prev ? { ...prev, status: "published", slug } : prev);
       setSaveMsg("Published! Live at /reviews/" + slug);
@@ -150,15 +270,55 @@ function ArticleEditor({
     }
   };
 
-  const copyToClipboard = async (text: string, type: "twitter" | "linkedin") => {
-    await navigator.clipboard.writeText(text);
-    if (type === "twitter") {
-      setCopiedTwitter(true);
-      setTimeout(() => setCopiedTwitter(false), 2000);
-    } else {
-      setCopiedLinkedIn(true);
-      setTimeout(() => setCopiedLinkedIn(false), 2000);
+  const handlePrepareSeoFrame = () => {
+    if (!article) return;
+    const sourceText = editedEditorial || editedContent || article.title;
+    setSearchHeadline((current) => current || article.title);
+    setSeoTitle((current) => current || `${article.title} Review: Greybrainer Three-Layer Analysis`);
+    setSeoDescription((current) => current || plainText(sourceText, 155));
+    setVerdict((current) => current || firstWords(sourceText, 50));
+    setWhoShouldWatch((current) => current || "For viewers who want more than a thumbs-up verdict: story signal, craft reading, audience movement, and a clean sense of whether the film will stay with them.");
+    setMorphokineticsTeaser((current) => current || "The Morphokinetics pass reads how attention, tension, release, and emotional momentum move through the film without exposing the full internal scoring model.");
+    setProducerInsight((current) => current || "For producers and directors, this review highlights the public-facing signals: where the film's intent lands, where craft choices amplify it, and where audience energy may shift.");
+    setFaqs((current) =>
+      cleanFaqs(current).length
+        ? current
+        : [
+            { question: `Is ${article.title} worth watching?`, answer: "Yes, if the film's core promise matches what you want from the genre and viewing mood described in this review." },
+            { question: "What does Greybrainer analyze?", answer: "Greybrainer reads story/script, conceptualization, performance/execution, audience pulse, and Morphokinetics as connected signals." },
+          ],
+    );
+  };
+
+  const handleUploadImage = async (file: File, target: "cover" | "inline") => {
+    if (!article) return;
+    setUploadingAsset(true);
+    setSaveMsg("");
+    try {
+      const storageRef = ref(
+        storage,
+        `article-assets/${article.id}/${Date.now()}-${safeAssetName(file.name)}`,
+      );
+      await uploadBytes(storageRef, file, { contentType: file.type });
+      const url = await getDownloadURL(storageRef);
+      if (target === "cover") {
+        setCoverImageUrl(url);
+      } else {
+        setInlineImageUrls((current) => (current ? `${current}\n${url}` : url));
+      }
+      setSaveMsg("Image uploaded. Save draft to keep it.");
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      setSaveMsg("Image upload failed. Check Firebase Storage rules.");
+    } finally {
+      setUploadingAsset(false);
     }
+  };
+
+  const copyToClipboard = async (text: string, channel: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedChannel(channel);
+    setTimeout(() => setCopiedChannel(null), 2000);
   };
 
   const handleGenerateScript = async () => {
@@ -210,6 +370,26 @@ function ArticleEditor({
       </div>
     );
   }
+
+  const liveSlug = article.slug || slugify(searchHeadline || article.title);
+  const liveUrl = `${PUBLIC_SITE_URL}/reviews/${liveSlug}`;
+  const socialDrafts = {
+    linkedin:
+      article.socials?.linkedin ||
+      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer reads the film through story signal, craft execution, audience pulse, and Morphokinetics.\n\nRead the full review: ${liveUrl}`,
+    twitter:
+      article.socials?.twitter ||
+      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 170)}\n\nFull Greybrainer review: ${liveUrl}`,
+    instagram:
+      article.socials?.instagram ||
+      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer Lens: story, craft, audience pulse, Morphokinetics.\n\nLink in bio / full review: ${liveUrl}\n\n#Greybrainer #MovieReview #Cinema`,
+    facebook:
+      article.socials?.facebook ||
+      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 240)}\n\nRead the complete Greybrainer review: ${liveUrl}`,
+    medium:
+      article.socials?.medium ||
+      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 260)}\n\nOriginally published on Greybrainer Movies: ${liveUrl}`,
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
@@ -300,7 +480,7 @@ function ArticleEditor({
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-8 pt-6">
         <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 w-fit mb-6">
-          {(["article", "social", "assets"] as const).map((tab) => (
+          {(["article", "seo", "social", "assets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -310,7 +490,13 @@ function ArticleEditor({
                   : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              {tab === "article" ? "Article Editor" : tab === "social" ? "Social Posts" : "Assets & Images"}
+              {tab === "article"
+                ? "Article Editor"
+                : tab === "seo"
+                  ? "Website SEO"
+                  : tab === "social"
+                    ? "Social Posts"
+                    : "Assets & Images"}
             </button>
           ))}
         </div>
@@ -325,6 +511,21 @@ function ArticleEditor({
             placeholder="https://images.unsplash.com/photo-..."
             className="w-full bg-slate-800 border border-slate-700 rounded-md px-4 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
           />
+          <label className="mt-3 inline-flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-md transition cursor-pointer">
+            {uploadingAsset ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+            Upload Cover
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploadingAsset}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void handleUploadImage(file, "cover");
+                event.currentTarget.value = "";
+              }}
+            />
+          </label>
           {coverImageUrl && (
             <div className="mt-2 h-32 rounded-lg overflow-hidden">
               <img src={coverImageUrl} alt="Cover preview" className="w-full h-full object-cover" />
@@ -375,41 +576,241 @@ function ArticleEditor({
           </div>
         )}
 
-        {activeTab === "social" && (
-          <div className="mb-12 space-y-8">
-            {/* Twitter */}
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">Twitter / X Post</h3>
-                <button
-                  onClick={() => article.socials?.twitter && copyToClipboard(article.socials.twitter, "twitter")}
-                  className="flex items-center text-sm text-slate-400 hover:text-white transition"
-                >
-                  {copiedTwitter ? <Check className="w-4 h-4 mr-1 text-green-400" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copiedTwitter ? "Copied!" : "Copy"}
-                </button>
+        {activeTab === "seo" && (
+          <div className="mb-12 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Website Publish Pack</h2>
+                <p className="text-sm text-slate-400 mt-1">
+                  These fields become the owned-site article, metadata, schema, FAQ, and social source.
+                </p>
               </div>
-              <div className="bg-slate-900 rounded-md p-4 text-slate-300 text-sm whitespace-pre-wrap">
-                {article.socials?.twitter || "No Twitter post generated."}
-              </div>
+              <button
+                onClick={handlePrepareSeoFrame}
+                className="inline-flex items-center w-fit rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-600 transition"
+              >
+                <Wand2 className="w-4 h-4 mr-2" />
+                Prepare Frame
+              </button>
             </div>
 
-            {/* LinkedIn */}
-            <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Field label="Search Headline">
+                <input
+                  value={searchHeadline}
+                  onChange={(e) => setSearchHeadline(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="SEO Title">
+                <input
+                  value={seoTitle}
+                  onChange={(e) => setSeoTitle(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+            </div>
+
+            <Field label="Meta Description">
+              <textarea
+                value={seoDescription}
+                onChange={(e) => setSeoDescription(e.target.value)}
+                rows={2}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </Field>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Field label="50-Word Verdict">
+                <textarea
+                  value={verdict}
+                  onChange={(e) => setVerdict(e.target.value)}
+                  rows={5}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="Who Should Watch">
+                <textarea
+                  value={whoShouldWatch}
+                  onChange={(e) => setWhoShouldWatch(e.target.value)}
+                  rows={5}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Field label="Story/Script Score">
+                <input
+                  value={storyScore}
+                  onChange={(e) => setStoryScore(e.target.value)}
+                  placeholder="8.2/10"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="Concept Score">
+                <input
+                  value={conceptScore}
+                  onChange={(e) => setConceptScore(e.target.value)}
+                  placeholder="8.0/10"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="Execution Score">
+                <input
+                  value={executionScore}
+                  onChange={(e) => setExecutionScore(e.target.value)}
+                  placeholder="7.8/10"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="Overall Score">
+                <input
+                  value={overallScore}
+                  onChange={(e) => setOverallScore(e.target.value)}
+                  placeholder="8.0/10"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Field label="Morphokinetics Teaser">
+                <textarea
+                  value={morphokineticsTeaser}
+                  onChange={(e) => setMorphokineticsTeaser(e.target.value)}
+                  rows={5}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+              <Field label="Producer / Director Insight">
+                <textarea
+                  value={producerInsight}
+                  onChange={(e) => setProducerInsight(e.target.value)}
+                  rows={5}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <Field label="Inline Image URLs">
+                <textarea
+                  value={inlineImageUrls}
+                  onChange={(e) => setInlineImageUrls(e.target.value)}
+                  rows={5}
+                  placeholder="One image URL per line"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+                <label className="mt-3 inline-flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-md transition cursor-pointer">
+                  {uploadingAsset ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                  Upload Inline Image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingAsset}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (file) void handleUploadImage(file, "inline");
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              </Field>
+
+              <Field label="Related Article Slugs or URLs">
+                <textarea
+                  value={relatedSlugs}
+                  onChange={(e) => setRelatedSlugs(e.target.value)}
+                  rows={5}
+                  placeholder="one-related-article-slug"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </Field>
+            </div>
+
+            <div className="rounded-lg border border-slate-700 bg-slate-800 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">LinkedIn Post</h3>
+                <h3 className="text-lg font-bold text-white">FAQ</h3>
                 <button
-                  onClick={() => article.socials?.linkedin && copyToClipboard(article.socials.linkedin, "linkedin")}
-                  className="flex items-center text-sm text-slate-400 hover:text-white transition"
+                  onClick={() => setFaqs((current) => [...current, { question: "", answer: "" }])}
+                  className="inline-flex items-center rounded-md bg-slate-700 px-3 py-2 text-sm text-white hover:bg-slate-600 transition"
                 >
-                  {copiedLinkedIn ? <Check className="w-4 h-4 mr-1 text-green-400" /> : <Copy className="w-4 h-4 mr-1" />}
-                  {copiedLinkedIn ? "Copied!" : "Copy"}
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add FAQ
                 </button>
               </div>
-              <div className="bg-slate-900 rounded-md p-4 text-slate-300 text-sm whitespace-pre-wrap">
-                {article.socials?.linkedin || "No LinkedIn post generated."}
+              <div className="space-y-4">
+                {faqs.map((faq, index) => (
+                  <div key={index} className="rounded-md border border-slate-700 bg-slate-900 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-semibold text-slate-300">Question {index + 1}</span>
+                      <button
+                        onClick={() => setFaqs((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        className="text-slate-500 hover:text-red-300 transition"
+                        aria-label="Remove FAQ"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <input
+                      value={faq.question}
+                      onChange={(e) =>
+                        setFaqs((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, question: e.target.value } : item,
+                          ),
+                        )
+                      }
+                      placeholder="Question"
+                      className="mb-3 w-full bg-slate-800 border border-slate-700 rounded-md px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <textarea
+                      value={faq.answer}
+                      onChange={(e) =>
+                        setFaqs((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, answer: e.target.value } : item,
+                          ),
+                        )
+                      }
+                      rows={3}
+                      placeholder="Answer"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-md px-4 py-3 text-white text-sm resize-y focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === "social" && (
+          <div className="mb-12 space-y-8">
+            {[
+              ["linkedin", "LinkedIn Post", socialDrafts.linkedin],
+              ["twitter", "X / Twitter Post", socialDrafts.twitter],
+              ["instagram", "Instagram Caption", socialDrafts.instagram],
+              ["facebook", "Facebook Post", socialDrafts.facebook],
+              ["medium", "Medium Syndication Note", socialDrafts.medium],
+            ].map(([channel, label, text]) => (
+              <div key={channel} className="bg-slate-800 rounded-lg border border-slate-700 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-white">{label}</h3>
+                  <button
+                    onClick={() => copyToClipboard(text, channel)}
+                    className="flex items-center text-sm text-slate-400 hover:text-white transition"
+                  >
+                    {copiedChannel === channel ? <Check className="w-4 h-4 mr-1 text-green-400" /> : <Copy className="w-4 h-4 mr-1" />}
+                    {copiedChannel === channel ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <div className="bg-slate-900 rounded-md p-4 text-slate-300 text-sm whitespace-pre-wrap">
+                  {text}
+                </div>
+              </div>
+            ))}
 
             {/* YouTube Script Editable */}
             <div className="bg-slate-800 rounded-lg border border-red-500/30 p-6">
@@ -449,7 +850,7 @@ function ArticleEditor({
                   placeholder="YouTube script..."
                 />
               )}
-              <p className="text-xs text-slate-500 mt-2">Edit the script here. Pranit's local video generator will pull exactly what you save here for the voiceover.</p>
+              <p className="text-xs text-slate-500 mt-2">Edit the script here. Pranit&apos;s local video generator will pull exactly what you save here for the voiceover.</p>
             </div>
           </div>
         )}

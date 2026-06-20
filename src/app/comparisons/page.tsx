@@ -1,30 +1,27 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Layers, Loader2 } from "lucide-react";
-import type { SiteArticle } from "@/lib/articleTypes";
+import type { Metadata } from "next";
+import { Layers } from "lucide-react";
+import { getAllArticles } from "@/lib/articles";
+import { absoluteUrl } from "@/lib/site";
 
-export default function ComparisonsPage() {
-  const [articles, setArticles] = useState<SiteArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 900;
 
-  useEffect(() => {
-    async function fetchComparisons() {
-      try {
-        const response = await fetch("/api/articles?kind=comparison&limit=120");
-        if (!response.ok) throw new Error(`Comparisons request failed: ${response.status}`);
-        const payload = (await response.json()) as { articles: SiteArticle[] };
-        setArticles(payload.articles);
-      } catch (error) {
-        console.error("Failed to fetch comparisons:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+export const metadata: Metadata = {
+  title: "Film Comparisons",
+  description:
+    "Side-by-side Greybrainer film comparisons across story, conceptualization, execution, and audience movement.",
+  alternates: { canonical: "/comparisons" },
+  openGraph: {
+    title: "Film Comparisons | Greybrainer Movies",
+    description:
+      "Read side-by-side Greybrainer film comparisons across story, craft, and audience movement.",
+    url: absoluteUrl("/comparisons"),
+    type: "website",
+  },
+};
 
-    fetchComparisons();
-  }, []);
+export default async function ComparisonsPage() {
+  const articles = (await getAllArticles(220)).filter((article) => article.kind === "comparison").slice(0, 120);
 
   return (
     <div className="min-h-screen bg-slate-900 pt-24 pb-20">
@@ -39,11 +36,7 @@ export default function ComparisonsPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-          </div>
-        ) : articles.length === 0 ? (
+        {articles.length === 0 ? (
           <div className="text-center py-20">
             <div className="bg-slate-800/50 rounded-xl border border-slate-700/30 inline-block px-12 py-10">
               <Layers className="w-16 h-16 text-purple-400/30 mx-auto mb-4" />

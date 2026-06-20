@@ -1,30 +1,28 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, TrendingUp } from "lucide-react";
+import type { Metadata } from "next";
+import { TrendingUp } from "lucide-react";
+import { getAllArticles } from "@/lib/articles";
+import { absoluteUrl } from "@/lib/site";
 import type { SiteArticle } from "@/lib/articleTypes";
 
-export default function InsightsPage() {
-  const [articles, setArticles] = useState<SiteArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 900;
 
-  useEffect(() => {
-    async function fetchInsights() {
-      try {
-        const response = await fetch("/api/articles?kind=insight&limit=160");
-        if (!response.ok) throw new Error(`Insights request failed: ${response.status}`);
-        const payload = (await response.json()) as { articles: SiteArticle[] };
-        setArticles(payload.articles);
-      } catch (error) {
-        console.error("Failed to fetch insights:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
+export const metadata: Metadata = {
+  title: "Research & Insights",
+  description:
+    "Greybrainer cultural pattern analysis, Morphokinetics, and entertainment intelligence for film viewers and makers.",
+  alternates: { canonical: "/insights" },
+  openGraph: {
+    title: "Research & Insights | Greybrainer Movies",
+    description:
+      "Explore Greybrainer cultural pattern analysis, Morphokinetics, and entertainment intelligence.",
+    url: absoluteUrl("/insights"),
+    type: "website",
+  },
+};
 
-    fetchInsights();
-  }, []);
+export default async function InsightsPage() {
+  const articles = (await getAllArticles(220)).filter((article) => article.kind === "insight").slice(0, 160);
 
   return (
     <div className="min-h-screen bg-slate-900 pt-24 pb-20">
@@ -39,11 +37,7 @@ export default function InsightsPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-          </div>
-        ) : articles.length === 0 ? (
+        {articles.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-slate-500 text-lg">No insights are published yet.</p>
           </div>
@@ -77,13 +71,7 @@ export default function InsightsPage() {
                   </h2>
                   <p className="text-slate-400 text-sm line-clamp-3">{article.excerpt}</p>
                   <p className="text-xs text-slate-500 mt-3">
-                    {article.publishedAt
-                      ? new Date(article.publishedAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : ""}
+                    {formatDate(article)}
                   </p>
                 </div>
               </Link>
@@ -93,4 +81,13 @@ export default function InsightsPage() {
       </div>
     </div>
   );
+}
+
+function formatDate(article: SiteArticle) {
+  if (!article.publishedAt) return "";
+  return new Date(article.publishedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }

@@ -1,49 +1,16 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Film, TrendingUp, BookOpen, Layers, Loader2 } from "lucide-react";
+import { Film, TrendingUp, BookOpen, Layers } from "lucide-react";
+import { getAllArticles } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
 
-export default function Home() {
-  const [articles, setArticles] = useState<SiteArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 900;
 
-  useEffect(() => {
-    async function fetchPublished() {
-      try {
-        const response = await fetch("/api/articles?limit=60");
-        if (!response.ok) throw new Error(`Articles request failed: ${response.status}`);
-        const payload = (await response.json()) as { articles: SiteArticle[] };
-        setArticles(payload.articles);
-      } catch (err) {
-        console.error("Failed to fetch published articles:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchPublished();
-  }, []);
-
+export default async function Home() {
+  const articles = await getAllArticles(60);
   const hero = articles[0] || null;
   const deepReviews = articles.filter((a) => a.kind === "review").slice(0, 8);
   const briefings = articles.filter((a) => a.kind === "brief").slice(0, 8);
   const insights = articles.filter((a) => a.kind === "insight").slice(0, 6);
-
-  function getDateString(article: SiteArticle) {
-    if (!article.publishedAt) return "";
-    return new Date(article.publishedAt).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }
-
-  function getExcerpt(article: SiteArticle, maxLen = 180) {
-    const text = article.excerpt || article.editorial || article.content || "";
-    if (text.length <= maxLen) return text;
-    return text.slice(0, maxLen).replace(/[#*_\n]/g, "").trim() + "...";
-  }
 
   return (
     <main className="flex-1 pb-20">
@@ -93,12 +60,6 @@ export default function Home() {
       </div>
 
       <div className="max-w-7xl mx-auto px-8 -mt-8 relative z-30 space-y-16">
-        {loading && (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-          </div>
-        )}
-
         {/* Deep Reviews Row */}
         {deepReviews.length > 0 && (
           <section>
@@ -335,4 +296,19 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+function getDateString(article: SiteArticle) {
+  if (!article.publishedAt) return "";
+  return new Date(article.publishedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getExcerpt(article: SiteArticle, maxLen = 180) {
+  const text = article.excerpt || article.editorial || article.content || "";
+  if (text.length <= maxLen) return text;
+  return `${text.slice(0, maxLen).replace(/[#*_\n]/g, "").trim()}...`;
 }

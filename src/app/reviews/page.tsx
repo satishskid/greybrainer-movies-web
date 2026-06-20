@@ -1,29 +1,28 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Loader2 } from "lucide-react";
+import type { Metadata } from "next";
+import { BookOpen } from "lucide-react";
+import { getAllArticles } from "@/lib/articles";
+import { absoluteUrl } from "@/lib/site";
 import type { SiteArticle } from "@/lib/articleTypes";
 
-export default function ReviewsPage() {
-  const [articles, setArticles] = useState<SiteArticle[]>([]);
-  const [loading, setLoading] = useState(true);
+export const revalidate = 900;
 
-  useEffect(() => {
-    async function fetchAll() {
-      try {
-        const response = await fetch("/api/articles?kind=review&limit=160");
-        if (!response.ok) throw new Error(`Reviews request failed: ${response.status}`);
-        const payload = (await response.json()) as { articles: SiteArticle[] };
-        setArticles(payload.articles);
-      } catch (err) {
-        console.error("Failed to fetch reviews:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchAll();
-  }, []);
+export const metadata: Metadata = {
+  title: "Deep Reviews",
+  description:
+    "Greybrainer deep movie reviews with three-layer analysis across story, conceptualization, execution, and Morphokinetics.",
+  alternates: { canonical: "/reviews" },
+  openGraph: {
+    title: "Deep Reviews | Greybrainer Movies",
+    description:
+      "Read Greybrainer deep movie reviews with three-layer analysis and Morphokinetics.",
+    url: absoluteUrl("/reviews"),
+    type: "website",
+  },
+};
+
+export default async function ReviewsPage() {
+  const articles = (await getAllArticles(220)).filter((article) => article.kind === "review").slice(0, 160);
 
   return (
     <div className="min-h-screen bg-slate-900 pt-24 pb-20">
@@ -38,11 +37,7 @@ export default function ReviewsPage() {
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-          </div>
-        ) : articles.length === 0 ? (
+        {articles.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-slate-500 text-lg">No published reviews yet. Check back soon!</p>
           </div>
@@ -78,13 +73,7 @@ export default function ReviewsPage() {
                     {article.excerpt}
                   </p>
                   <p className="text-xs text-slate-500 mt-3">
-                    {article.publishedAt
-                      ? new Date(article.publishedAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : ""}
+                    {formatDate(article)}
                   </p>
                 </div>
               </Link>
@@ -94,4 +83,13 @@ export default function ReviewsPage() {
       </div>
     </div>
   );
+}
+
+function formatDate(article: SiteArticle) {
+  if (!article.publishedAt) return "";
+  return new Date(article.publishedAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }

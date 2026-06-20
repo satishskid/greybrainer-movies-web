@@ -1,5 +1,10 @@
 export type ArticleKind = "review" | "brief" | "insight" | "comparison";
 
+export interface ArticleFaq {
+  question: string;
+  answer: string;
+}
+
 export interface SiteArticle {
   id: string;
   title: string;
@@ -19,4 +24,18 @@ export interface SiteArticle {
   tags: string[];
   type: string;
   youtubeScript?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  searchHeadline?: string;
+  verdict?: string;
+  whoShouldWatch?: string;
+  storyScore?: string;
+  conceptScore?: string;
+  executionScore?: string;
+  overallScore?: string;
+  morphokineticsTeaser?: string;
+  producerInsight?: string;
+  faqs: ArticleFaq[];
+  relatedSlugs: string[];
+  inlineImageUrls: string[];
 }

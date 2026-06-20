@@ -1,7 +1,7 @@
 import { collection, getDocs, limit as firestoreLimit, orderBy, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import lensArchiveData from "@/data/lensArchive.json";
-import type { ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import type { ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
 const DEFAULT_ARCHIVE_LIMIT = 220;
@@ -231,6 +231,30 @@ function makeExcerpt(markdownOrText: string, maxLength = 190) {
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
+function optionalString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function stringArray(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim());
+}
+
+function normalizeFaqs(value: unknown): ArticleFaq[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const entry = item as { question?: unknown; answer?: unknown };
+      const question = optionalString(entry.question);
+      const answer = optionalString(entry.answer);
+      return question && answer ? { question, answer } : null;
+    })
+    .filter((item): item is ArticleFaq => Boolean(item));
+}
+
 function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteArticle {
   const title = String(data.title ?? "Untitled");
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
@@ -258,6 +282,20 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     status: String(data.status ?? "published"),
     tags,
     type,
+    seoTitle: optionalString(data.seoTitle),
+    seoDescription: optionalString(data.seoDescription),
+    searchHeadline: optionalString(data.searchHeadline),
+    verdict: optionalString(data.verdict),
+    whoShouldWatch: optionalString(data.whoShouldWatch),
+    storyScore: optionalString(data.storyScore),
+    conceptScore: optionalString(data.conceptScore),
+    executionScore: optionalString(data.executionScore),
+    overallScore: optionalString(data.overallScore),
+    morphokineticsTeaser: optionalString(data.morphokineticsTeaser),
+    producerInsight: optionalString(data.producerInsight),
+    faqs: normalizeFaqs(data.faqs),
+    relatedSlugs: stringArray(data.relatedSlugs),
+    inlineImageUrls: stringArray(data.inlineImageUrls),
   };
 }
 
@@ -293,6 +331,9 @@ function normalizeFeedItem(itemXml: string, index: number): SiteArticle | null {
     status: "published",
     tags,
     type: kind === "review" ? "archive_review" : `archive_${kind}`,
+    faqs: [],
+    relatedSlugs: [],
+    inlineImageUrls: [],
   };
 }
 
@@ -319,6 +360,9 @@ function normalizeStaticArchiveEntry(entry: LensArchiveEntry): SiteArticle {
     status: "published",
     tags,
     type: kind === "review" ? "archive_review" : `archive_${kind}`,
+    faqs: [],
+    relatedSlugs: [],
+    inlineImageUrls: [],
   };
 }
 
