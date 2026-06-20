@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { format } from "date-fns";
 import { HubAuthGate } from "@/components/HubAuthGate";
 import type { HubRole } from "@/lib/hubRoles";
+import { SITE_AUTHOR } from "@/lib/site";
 
 interface ResearchItem {
   id: string;
@@ -189,7 +190,7 @@ function WriterHubContent({
         editorial: content,
         createdAt: new Date(),
         status: "draft",
-        createdBy: user.email || "Greybrainer editor",
+        createdBy: SITE_AUTHOR,
         source: "writer_hub",
         tags: isBrief ? ["daily brief", "greybrainer lens"] : ["greybrainer"],
         searchHeadline: title,

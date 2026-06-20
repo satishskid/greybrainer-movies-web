@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { Clock, User, ArrowLeft, Share2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { SiteArticle } from "@/lib/articleTypes";
+import { publicAuthorName } from "@/lib/site";
 
 interface ReviewArticleProps {
   article: SiteArticle;
@@ -17,6 +18,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
     ? `${article.editorial}\n\n---\n\n## Detailed Research Analysis\n\n${article.content}`
     : (article.editorial || article.content || "");
   const publishDate = article.publishedAt ? new Date(article.publishedAt) : new Date();
+  const authorName = publicAuthorName(article.createdBy);
   const structuredHighlights = [
     article.verdict,
     article.whoShouldWatch,
@@ -62,7 +64,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
           <div className="flex items-center space-x-6 text-slate-300 text-sm">
             <span className="flex items-center">
               <User className="w-4 h-4 mr-2" />
-              {article.createdBy || "Greybrainer AI"}
+              {authorName}
             </span>
             <span className="flex items-center">
               <Clock className="w-4 h-4 mr-2" />
