@@ -1,5 +1,6 @@
 export const SITE_NAME = "Greybrainer Movies";
 export const SITE_BRAND = "Greybrainer";
+export const SITE_AUTHOR = "GreyBrain Lens";
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in"
 ).replace(/\/$/, "");
@@ -10,6 +11,12 @@ export const SITE_DESCRIPTION =
 export function absoluteUrl(path = "/") {
   if (/^https?:\/\//i.test(path)) return path;
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function publicAuthorName(value?: string | null) {
+  const author = (value || "").trim();
+  if (!author || author.includes("@")) return SITE_AUTHOR;
+  return author;
 }
 
 export function toPlainText(value: string, maxLength?: number) {

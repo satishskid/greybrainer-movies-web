@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { ReviewArticle } from "./ReviewArticle";
 import { getAllArticles, getArticleBySlug } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
-import { absoluteUrl, SITE_BRAND, SITE_DESCRIPTION, SITE_NAME, toPlainText } from "@/lib/site";
+import { absoluteUrl, publicAuthorName, SITE_BRAND, SITE_DESCRIPTION, SITE_NAME, toPlainText } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = article.seoDescription || article.verdict || article.excerpt || SITE_DESCRIPTION;
   const canonical = `/reviews/${article.slug}`;
   const images = articleImageUrls(article);
+  const authorName = publicAuthorName(article.createdBy);
 
   return {
     title,
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images,
       type: "article",
       publishedTime: article.publishedAt || undefined,
-      authors: [article.createdBy || SITE_BRAND],
+      authors: [authorName],
     },
     twitter: {
       card: "summary_large_image",
@@ -108,6 +109,7 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
   const rating = parseRating(article.overallScore);
   const publishedDate = article.publishedAt || new Date().toISOString();
   const articleType = article.kind === "review" ? "Review" : "Article";
+  const authorName = publicAuthorName(article.createdBy);
   const mainEntity = {
     "@type": articleType,
     "@id": `${canonicalUrl}#article`,
@@ -119,7 +121,7 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
     dateModified: publishedDate,
     author: {
       "@type": "Organization",
-      name: article.createdBy || SITE_BRAND,
+      name: authorName,
     },
     publisher: {
       "@id": `${absoluteUrl("/")}#organization`,

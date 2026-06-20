@@ -1,5 +1,6 @@
 import lensArchiveData from "@/data/lensArchive.json";
 import type { ArticleDiagnosticImage, ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import { publicAuthorName } from "@/lib/site";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
 const DEFAULT_ARCHIVE_LIMIT = 220;
@@ -341,7 +342,7 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     editorial,
     excerpt: makeExcerpt(editorial || content),
     coverImageUrl: typeof data.coverImageUrl === "string" && data.coverImageUrl ? data.coverImageUrl : FALLBACK_IMAGES[kind],
-    createdBy: String(data.createdBy ?? "Greybrainer AI"),
+    createdBy: publicAuthorName(String(data.createdBy ?? "Greybrainer AI")),
     publishedAt: publishedDate.valueOf() > 0 ? publishedDate.toISOString() : null,
     publishedAtMs: publishedDate.valueOf(),
     source: "firebase",
