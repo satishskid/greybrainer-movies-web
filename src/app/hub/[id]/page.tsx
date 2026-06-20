@@ -94,6 +94,10 @@ function cleanFaqs(faqs: ArticleFaq[]) {
   return faqs.filter((faq) => faq.question.trim() && faq.answer.trim());
 }
 
+function isBriefType(type: string) {
+  return type === "daily_brief" || type === "daily-brief" || type.includes("brief");
+}
+
 export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <HubAuthGate>
@@ -181,10 +185,10 @@ function ArticleEditor({
           setCoverImageUrl(data.coverImageUrl || "");
           const sourceText = data.editorial || data.content || "";
           setSearchHeadline(data.searchHeadline || data.title);
-          setSeoTitle(data.seoTitle || `${data.title} Review: Greybrainer Three-Layer Analysis`);
+          setSeoTitle(data.seoTitle || (isBriefType(data.type) ? `${data.title} | Greybrainer Lens Brief` : `${data.title} Review: Greybrainer Three-Layer Analysis`));
           setSeoDescription(data.seoDescription || plainText(sourceText, 155));
           setVerdict(data.verdict || firstWords(sourceText, 50));
-          setWhoShouldWatch(data.whoShouldWatch || "");
+          setWhoShouldWatch(data.whoShouldWatch || (isBriefType(data.type) ? "For readers tracking the movie and OTT conversation through a sharper Greybrainer lens." : ""));
           setStoryScore(data.storyScore || "");
           setConceptScore(data.conceptScore || "");
           setExecutionScore(data.executionScore || "");
@@ -267,19 +271,28 @@ function ArticleEditor({
 
   const handlePrepareSeoFrame = () => {
     if (!article) return;
+    const isBrief = isBriefType(article.type);
     const sourceText = editedEditorial || editedContent || article.title;
     setSearchHeadline((current) => current || article.title);
-    setSeoTitle((current) => current || `${article.title} Review: Greybrainer Three-Layer Analysis`);
+    setSeoTitle((current) => current || (isBrief ? `${article.title} | Greybrainer Lens Brief` : `${article.title} Review: Greybrainer Three-Layer Analysis`));
     setSeoDescription((current) => current || plainText(sourceText, 155));
     setVerdict((current) => current || firstWords(sourceText, 50));
-    setWhoShouldWatch((current) => current || "For viewers who want more than a thumbs-up verdict: story signal, craft reading, audience movement, and a clean sense of whether the film will stay with them.");
-    setMorphokineticsTeaser((current) => current || "The Morphokinetics pass reads how attention, tension, release, and emotional momentum move through the film without exposing the full internal scoring model.");
-    setProducerInsight((current) => current || "For producers and directors, this review highlights the public-facing signals: where the film's intent lands, where craft choices amplify it, and where audience energy may shift.");
+    setWhoShouldWatch((current) => current || (isBrief
+      ? "For readers tracking the movie and OTT conversation through a sharper Greybrainer lens."
+      : "For viewers who want more than a thumbs-up verdict: story signal, craft reading, audience movement, and a clean sense of whether the film will stay with them."));
+    setMorphokineticsTeaser((current) => current || (isBrief
+      ? "This briefing reads audience attention, cultural momentum, and tonal shifts without exposing the internal scoring model."
+      : "The Morphokinetics pass reads how attention, tension, release, and emotional momentum move through the film without exposing the full internal scoring model."));
+    setProducerInsight((current) => current || (isBrief
+      ? "For producers and directors, this brief surfaces audience appetite, tonal shifts, and emerging story signals worth watching."
+      : "For producers and directors, this review highlights the public-facing signals: where the film's intent lands, where craft choices amplify it, and where audience energy may shift."));
     setFaqs((current) =>
       cleanFaqs(current).length
         ? current
         : [
-            { question: `Is ${article.title} worth watching?`, answer: "Yes, if the film's core promise matches what you want from the genre and viewing mood described in this review." },
+            ...(isBrief
+              ? [{ question: `What is ${article.title} about?`, answer: "It is a Greybrainer Lens briefing on the current movie and OTT conversation, written for quick but thoughtful reading." }]
+              : [{ question: `Is ${article.title} worth watching?`, answer: "Yes, if the film's core promise matches what you want from the genre and viewing mood described in this review." }]),
             { question: "What does Greybrainer analyze?", answer: "Greybrainer reads story/script, conceptualization, performance/execution, audience pulse, and Morphokinetics as connected signals." },
           ],
     );
