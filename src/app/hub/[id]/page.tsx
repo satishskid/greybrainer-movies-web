@@ -47,7 +47,7 @@ interface ResearchDoc {
   inlineImageUrls?: string[];
 }
 
-const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://greybrainer-movies.netlify.app").replace(/\/$/, "");
+const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in").replace(/\/$/, "");
 
 function slugify(text: string): string {
   return text
