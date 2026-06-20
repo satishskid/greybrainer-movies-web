@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Greybrainer Movies Website
 
-## Getting Started
+Public movie intelligence site and Writer Hub for Greybrainer Lens content.
 
-First, run the development server:
+- Production: https://movies.greybrain.in
+- Writer Hub: https://movies.greybrain.in/hub
+- Repository: https://github.com/satishskid/greybrainer-movies-web
+- Framework: Next.js App Router on Netlify
+- Content database: Firebase Firestore `published_research`
+- Image storage: Cloudflare R2 through protected upload routes
+
+## Current Publishing Model
+
+The website is the canonical publishing destination. Medium and social channels are still used manually by the content team, but the public website should receive the final article first.
+
+See the full team operating procedure in [docs/CONTENT_WORKFLOW_SOP.md](./docs/CONTENT_WORKFLOW_SOP.md).
+
+## Main Routes
+
+- `/` - Homepage with published reviews, briefings, and insights.
+- `/reviews` - Public listing of published reviews and Lens archive articles.
+- `/reviews/[slug]` - Public article page with SEO metadata, structured data, diagnostics, FAQs, and related reads.
+- `/hub` - Writer Hub inbox and manual draft creation.
+- `/hub/[id]` - Writer editor for article content, SEO, images, social copy, and publish action.
+- `/robots.txt` and `/sitemap.xml` - Search engine discovery.
+
+## Writer Hub Responsibilities
+
+The Hub is responsible for:
+
+- Creating daily newsletter drafts written outside the engine.
+- Refining engine-generated deep review drafts.
+- Uploading cover and inline images to R2.
+- Publishing articles to the public website.
+- Preparing manual social copy for Medium, LinkedIn, X, Instagram, and Facebook.
+
+Social posting is manual for now.
+
+## Engine Bridge
+
+The Greybrainer Engine writes draft review documents into Firebase. Those drafts can include:
+
+- SEO title and description.
+- Search headline.
+- 50-word verdict.
+- Three-layer scores.
+- Morphokinetics teaser.
+- Producer/director insight.
+- FAQ scaffolding.
+- Diagnostic images for three-layer rings and Morphokinetics.
+
+The public article page renders the diagnostic images automatically when present.
+
+## Local Development
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+Known lint warnings currently come from existing `<img>` usage and the video generation script warnings. They are warnings, not build blockers.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Netlify builds from `main`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Production deploy after the workflow hardening release:
 
-## Deploy on Vercel
+- Commit: `7eae2c4`
+- URL: https://movies.greybrain.in
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
