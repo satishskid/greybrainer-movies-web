@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck, Plus, Upload, X } from "lucide-react";
+import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck, Plus, Upload, X, RefreshCw } from "lucide-react";
 import { addDoc, collection, query, orderBy, getDocs, updateDoc, doc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
@@ -76,39 +76,47 @@ function WriterHubContent({
   const [newDraftInlineFiles, setNewDraftInlineFiles] = useState<File[]>([]);
   const [creatingDraft, setCreatingDraft] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [fetchError, setFetchError] = useState("");
+
+  async function fetchResearch() {
+    setLoading(true);
+    setFetchError("");
+    try {
+      const q = query(collection(db, "published_research"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      const firestoreItems = snapshot.docs.map(doc => ({
+        id: doc.id,
+        source: "firebase" as const,
+        ...doc.data()
+      })) as ResearchItem[];
+
+      const archiveResponse = await fetch("/api/articles?limit=220");
+      const archiveJson = archiveResponse.ok ? await archiveResponse.json() : { articles: [] };
+      const archiveItems = (archiveJson.articles || []).map((article: ResearchItem) => ({
+        ...article,
+        source: article.source || "lens-archive",
+      })) as ResearchItem[];
+
+      const byId = new Map<string, ResearchItem>();
+      for (const item of [...firestoreItems, ...archiveItems]) {
+        if (!item.id || byId.has(item.id)) continue;
+        byId.set(item.id, item);
+      }
+
+      setItems([...byId.values()]);
+    } catch (err) {
+      console.error("Failed to fetch research from Firebase:", err);
+      setFetchError("Could not refresh the content library. Check sign-in and Firestore access, then try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchResearch() {
-      try {
-        const q = query(collection(db, "published_research"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        const firestoreItems = snapshot.docs.map(doc => ({
-          id: doc.id,
-          source: "firebase" as const,
-          ...doc.data()
-        })) as ResearchItem[];
-
-        const archiveResponse = await fetch("/api/articles?limit=220");
-        const archiveJson = archiveResponse.ok ? await archiveResponse.json() : { articles: [] };
-        const archiveItems = (archiveJson.articles || []).map((article: ResearchItem) => ({
-          ...article,
-          source: article.source || "lens-archive",
-        })) as ResearchItem[];
-
-        const byId = new Map<string, ResearchItem>();
-        for (const item of [...firestoreItems, ...archiveItems]) {
-          if (!item.id || byId.has(item.id)) continue;
-          byId.set(item.id, item);
-        }
-
-        setItems([...byId.values()]);
-      } catch (err) {
-        console.error("Failed to fetch research from Firebase:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchResearch();
+    const timer = window.setTimeout(() => {
+      void fetchResearch();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function formatItemDate(item: ResearchItem) {
@@ -291,13 +299,23 @@ function WriterHubContent({
             <p className="text-slate-400">Engine drafts, writer-uploaded articles, and Medium archive posts currently powering Greybrainer Movies.</p>
           </div>
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <button
-              onClick={() => setShowNewDraft(true)}
-              className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Draft
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void fetchResearch()}
+                disabled={loading}
+                className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-60"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowNewDraft(true)}
+                className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New Draft
+              </button>
+            </div>
             <div className="hidden md:block text-right">
               <p className="text-xs uppercase tracking-wider text-slate-500">Signed in</p>
               <p className="text-sm font-semibold text-white">{user.email}</p>
@@ -458,6 +476,12 @@ function WriterHubContent({
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {fetchError && (
+          <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {fetchError}
           </div>
         )}
 

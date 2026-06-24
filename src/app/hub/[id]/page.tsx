@@ -4,7 +4,7 @@ import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -96,6 +96,11 @@ function cleanFaqs(faqs: ArticleFaq[]) {
 
 function isBriefType(type: string) {
   return type === "daily_brief" || type === "daily-brief" || type.includes("brief");
+}
+
+function getDiagnosticImageUrls(article: Pick<ResearchDoc, "images">) {
+  return [article.images?.rings, article.images?.morpho]
+    .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
 }
 
 function trackedUrl(baseUrl: string, source: string, campaign: string) {
@@ -212,7 +217,13 @@ function ArticleEditor({
           setMorphokineticsTeaser(data.morphokineticsTeaser || "");
           setProducerInsight(data.producerInsight || "");
           setFaqs(data.faqs?.length ? data.faqs : [{ question: "", answer: "" }]);
-          setInlineImageUrls((data.inlineImageUrls || []).join("\n"));
+          const storedInlineUrls = data.inlineImageUrls || [];
+          const diagnosticUrls = getDiagnosticImageUrls(data);
+          const mergedInlineUrls = [
+            ...storedInlineUrls,
+            ...diagnosticUrls.filter((url) => !storedInlineUrls.includes(url)),
+          ];
+          setInlineImageUrls(mergedInlineUrls.join("\n"));
           setRelatedSlugs((data.relatedSlugs || []).join("\n"));
         }
       } catch (err) {
@@ -499,6 +510,11 @@ function ArticleEditor({
     { channel: "alt-text", label: "Image Alt Text", text: socialDefaults.altText },
     { channel: "tracked-links", label: "Tracked Links", text: socialDefaults.trackedLinks },
   ];
+  const inlineUrlSet = new Set(linesToArray(inlineImageUrls));
+  const diagnosticAssets = [
+    { key: "rings", label: "Three-Layer Ring Image", url: article.images?.rings },
+    { key: "morpho", label: "Morphokinetics Graph", url: article.images?.morpho },
+  ].filter((asset): asset is { key: string; label: string; url: string } => Boolean(asset.url));
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
@@ -641,6 +657,43 @@ function ArticleEditor({
             </div>
           )}
         </div>
+
+        {diagnosticAssets.length > 0 && (
+          <div className="mb-6 rounded-lg border border-teal-500/30 bg-slate-800/80 p-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center text-lg font-bold text-white">
+                <ImageIcon className="mr-2 h-5 w-5 text-teal-300" />
+                Engine Diagnostic Visuals
+              </h2>
+              <span className="w-fit rounded-full border border-teal-500/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-teal-200">
+                {diagnosticAssets.length} Ready
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {diagnosticAssets.map((asset) => {
+                const isIncluded = inlineUrlSet.has(asset.url);
+                return (
+                  <div key={asset.key} className="rounded-md border border-slate-700 bg-slate-900 p-3">
+                    <div className="mb-3 h-44 overflow-hidden rounded-md bg-slate-950">
+                      <img src={asset.url} alt={`${article.title} ${asset.label}`} className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-slate-200">{asset.label}</span>
+                      <button
+                        onClick={() => addAssetToInlineImages(asset.url)}
+                        disabled={isIncluded}
+                        className="inline-flex items-center rounded-md bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-emerald-700/50 disabled:text-emerald-100"
+                      >
+                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        {isIncluded ? "Included" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Content Area */}
         {activeTab === "article" && (
@@ -967,11 +1020,11 @@ function ArticleEditor({
                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                   <button
                     onClick={() => article.images?.rings && addAssetToInlineImages(article.images.rings)}
-                    disabled={!article.images?.rings}
+                    disabled={!article.images?.rings || inlineUrlSet.has(article.images.rings)}
                     className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Add to Article Visuals
+                    {article.images?.rings && inlineUrlSet.has(article.images.rings) ? "Included in Article Visuals" : "Add to Article Visuals"}
                   </button>
                   <button
                     onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
@@ -998,11 +1051,11 @@ function ArticleEditor({
                 <div className="flex flex-wrap items-center gap-3 sm:justify-end">
                   <button
                     onClick={() => article.images?.morpho && addAssetToInlineImages(article.images.morpho)}
-                    disabled={!article.images?.morpho}
+                    disabled={!article.images?.morpho || inlineUrlSet.has(article.images.morpho)}
                     className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Add to Article Visuals
+                    {article.images?.morpho && inlineUrlSet.has(article.images.morpho) ? "Included in Article Visuals" : "Add to Article Visuals"}
                   </button>
                   <button
                     onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}

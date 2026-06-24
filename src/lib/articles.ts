@@ -331,6 +331,8 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
   const publishedDate = timestampToDate(data.publishedAt) ?? timestampToDate(data.createdAt) ?? new Date(0);
   const content = String(data.content ?? "");
   const editorial = typeof data.editorial === "string" ? data.editorial : null;
+  const diagnosticImages = normalizeDiagnosticImages(data.images);
+  const diagnosticUrls = new Set(diagnosticImages.map((image) => image.url));
 
   return {
     id,
@@ -363,8 +365,8 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     producerInsight: optionalString(data.producerInsight),
     faqs: normalizeFaqs(data.faqs),
     relatedSlugs: stringArray(data.relatedSlugs),
-    inlineImageUrls: stringArray(data.inlineImageUrls),
-    diagnosticImages: normalizeDiagnosticImages(data.images),
+    inlineImageUrls: stringArray(data.inlineImageUrls).filter((url) => !diagnosticUrls.has(url)),
+    diagnosticImages,
   };
 }
 
