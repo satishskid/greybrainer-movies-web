@@ -98,6 +98,14 @@ function isBriefType(type: string) {
   return type === "daily_brief" || type === "daily-brief" || type.includes("brief");
 }
 
+function isReferenceOnlyType(type?: string) {
+  return type === "creator_insights";
+}
+
+function baseTitle(title: string) {
+  return title.replace(/\s*-\s*Creator'?s Blueprint\s*$/i, "").trim();
+}
+
 function getDiagnosticImageUrls(article: Pick<ResearchDoc, "images">) {
   return [article.images?.rings, article.images?.morpho]
     .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
@@ -277,6 +285,10 @@ function ArticleEditor({
 
   const handlePublish = async () => {
     if (!article) return;
+    if (isReferenceOnlyType(article.type)) {
+      setSaveMsg("Reference only. Open the row marked PUBLISH THIS.");
+      return;
+    }
     setPublishing(true);
     try {
       const slug = article.slug || slugify(searchHeadline || article.title);
@@ -433,6 +445,8 @@ function ArticleEditor({
   const titleForSocial = searchHeadline || article.title;
   const sourceText = editedEditorial || editedContent || article.content || article.title;
   const isBrief = isBriefType(article.type);
+  const referenceOnly = isReferenceOnlyType(article.type);
+  const displayTitle = referenceOnly ? `Reference Notes: ${baseTitle(article.title)}` : article.title;
   const socialVerdict = fallbackText(
     verdict,
     firstWords(sourceText, 50) || `A Greybrainer reading of ${article.title}.`,
@@ -526,7 +540,7 @@ function ArticleEditor({
           </Link>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-xl font-bold text-white">{article.title}</h1>
+              <h1 className="text-xl font-bold text-white">{displayTitle}</h1>
               <div className="flex items-center px-2 py-1 bg-slate-900 rounded border border-slate-700">
                 <span className="text-xs text-slate-400 mr-2">Content ID:</span>
                 <code className="text-indigo-400 font-mono text-xs">{article.id}</code>
@@ -548,6 +562,13 @@ function ArticleEditor({
                   : "bg-amber-500/20 text-amber-400"
               }`}>
                 {article.status === "published" ? "Published" : "Draft"}
+              </span>
+              <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                referenceOnly
+                  ? "bg-slate-700 text-slate-300"
+                  : "bg-green-500/15 text-green-300"
+              }`}>
+                {referenceOnly ? "Reference Only" : "Publishable Article"}
               </span>
               {article.status === "published" && article.slug && (
                 <a href={`/reviews/${article.slug}`} target="_blank" className="text-xs text-slate-400 hover:text-white">
@@ -593,11 +614,15 @@ function ArticleEditor({
           </button>
           <button
             onClick={handlePublish}
-            disabled={publishing}
-            className="flex items-center px-5 py-2 bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white text-sm font-semibold rounded-md transition"
+            disabled={publishing || referenceOnly}
+            className={`flex items-center px-5 py-2 text-white text-sm font-semibold rounded-md transition ${
+              referenceOnly
+                ? "bg-slate-700 text-slate-300 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-500 disabled:bg-red-800"
+            }`}
           >
             <Globe className="w-4 h-4 mr-2" />
-            {publishing ? "Publishing..." : "Publish to Site"}
+            {referenceOnly ? "Reference Only" : publishing ? "Publishing..." : "Publish to Site"}
           </button>
         </div>
       </div>
@@ -625,6 +650,15 @@ function ArticleEditor({
             </button>
           ))}
         </div>
+
+        {referenceOnly && (
+          <div className="mb-6 rounded-lg border border-slate-700 bg-slate-800 p-5">
+            <p className="text-sm font-bold uppercase tracking-wider text-slate-300">Reference only</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Use this for background notes. To publish, go back to Content Library and open the row marked PUBLISH THIS.
+            </p>
+          </div>
+        )}
 
         {/* Cover Image URL */}
         <div className="mb-6">

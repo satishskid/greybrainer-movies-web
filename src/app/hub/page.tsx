@@ -48,6 +48,14 @@ function firstWords(value: string, maxWords: number) {
   return plainText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(" ");
 }
 
+function isReferenceOnly(item: ResearchItem) {
+  return item.type === "creator_insights";
+}
+
+function baseTitle(title: string) {
+  return title.replace(/\s*-\s*Creator'?s Blueprint\s*$/i, "").trim();
+}
+
 export default function WriterHub() {
   return (
     <HubAuthGate>
@@ -140,11 +148,33 @@ function WriterHubContent({
 
   function itemLabel(item: ResearchItem) {
     if (item.categoryLabel) return item.categoryLabel;
-    if (item.type === "daily_brief") return "Daily Briefing";
-    if (item.type === "research_export") return "Deep Review";
-    if (item.type === "insight") return "Insight";
+    if (item.type === "daily_brief") return "Daily Newsletter";
+    if (item.type === "research_export") return "Review Article";
+    if (item.type === "creator_insights") return "Reference Notes";
+    if (item.type === "insight") return "Insight Article";
     if (item.kind) return item.kind;
     return item.type || "Article";
+  }
+
+  function itemTitle(item: ResearchItem) {
+    if (isReferenceOnly(item)) return `Reference Notes: ${baseTitle(item.title)}`;
+    return item.title;
+  }
+
+  function itemActionLabel(item: ResearchItem) {
+    if (item.type === "research_export") return "Edit Review";
+    if (item.type === "daily_brief") return "Edit Newsletter";
+    if (item.type === "insight") return "Edit Insight";
+    if (isReferenceOnly(item)) return "Open Reference";
+    return "Open";
+  }
+
+  function itemInstruction(item: ResearchItem) {
+    if (item.type === "research_export") return "Use this row for website publishing.";
+    if (item.type === "daily_brief") return "Use this row for the daily website article.";
+    if (item.type === "insight") return "Use this row for an insight article.";
+    if (isReferenceOnly(item)) return "Background only. Do not publish this row.";
+    return "Review before publishing.";
   }
 
   function resetNewDraftForm() {
@@ -351,9 +381,9 @@ function WriterHubContent({
                     onChange={(event) => setNewDraftType(event.target.value as ManualDraftType)}
                     className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
-                    <option value="daily_brief">Daily Briefing</option>
+                    <option value="daily_brief">Daily Newsletter</option>
                     <option value="insight">Insight</option>
-                    <option value="research_export">Deep Review</option>
+                    <option value="research_export">Review Article</option>
                   </select>
                 </label>
                 <label className="block">
@@ -511,36 +541,55 @@ function WriterHubContent({
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-700/20 transition group">
-                    <td className="px-6 py-4 text-white font-medium">{item.title}</td>
-                    <td className="px-6 py-4 text-slate-400">
-                      <span className="bg-slate-700 text-xs px-2 py-1 rounded">
-                        {itemLabel(item)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400 text-sm">
-                      {formatItemDate(item)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {item.source === "lens-archive" ? (
-                        <Link
-                          href={item.slug ? `/reviews/${item.slug}` : item.sourceUrl || "/reviews"}
-                          className="text-slate-300 hover:text-white font-medium text-sm opacity-0 group-hover:opacity-100 transition"
-                        >
-                          View live →
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/hub/${item.id}`}
-                          className="text-red-400 hover:text-red-300 font-medium text-sm opacity-0 group-hover:opacity-100 transition"
-                        >
-                          Edit &amp; Publish →
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                items.map((item) => {
+                  const referenceOnly = isReferenceOnly(item);
+                  return (
+                    <tr key={item.id} className={`${referenceOnly ? "bg-slate-900/30" : ""} hover:bg-slate-700/20 transition group`}>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                              referenceOnly
+                                ? "bg-slate-700 text-slate-300"
+                                : "bg-green-500/15 text-green-300"
+                            }`}>
+                              {referenceOnly ? "Reference only" : "Publish this"}
+                            </span>
+                            <span className={`font-medium ${referenceOnly ? "text-slate-300" : "text-white"}`}>
+                              {itemTitle(item)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500">{itemInstruction(item)}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400">
+                        <span className={`${referenceOnly ? "bg-slate-900 text-slate-400" : "bg-slate-700 text-slate-200"} text-xs px-2 py-1 rounded`}>
+                          {itemLabel(item)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 text-sm">
+                        {formatItemDate(item)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {item.source === "lens-archive" ? (
+                          <Link
+                            href={item.slug ? `/reviews/${item.slug}` : item.sourceUrl || "/reviews"}
+                            className="text-slate-300 hover:text-white font-medium text-sm transition"
+                          >
+                            View live →
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/hub/${item.id}`}
+                            className={`${referenceOnly ? "text-slate-400 hover:text-slate-200" : "text-red-400 hover:text-red-300"} font-medium text-sm transition`}
+                          >
+                            {itemActionLabel(item)} →
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
