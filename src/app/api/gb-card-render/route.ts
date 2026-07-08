@@ -160,13 +160,52 @@ function bulletText(items: string[], x: number, y: number) {
   `).join("");
 }
 
-function fallbackRings() {
+function scoreFromRow(row: string) {
+  const match = row.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const score = Number(match[1]);
+  if (!Number.isFinite(score)) return null;
+  return Math.max(0, Math.min(score, 10));
+}
+
+function labelFromRow(row: string, fallback: string) {
+  const [label] = row.split(":");
+  return text(label, fallback).replace(/\/Script$/i, "");
+}
+
+function scoreRings(scoreRows: string[], overallScore: string) {
+  const rows = scoreRows.filter((row) => !/^overall\s*:/i.test(row)).slice(0, 3);
+  const defaults = ["Story", "Concept", "Execution"];
+  const rings = defaults.map((fallback, index) => {
+    const row = rows[index] || "";
+    return {
+      label: labelFromRow(row, fallback),
+      score: scoreFromRow(row),
+      radius: 220 - index * 58,
+      color: index === 0 ? "#ef4444" : index === 1 ? "#14b8a6" : "#f59e0b",
+    };
+  });
+
   return `
-    <circle cx="540" cy="610" r="270" fill="none" stroke="#ef4444" stroke-width="26" opacity="0.95" />
-    <circle cx="540" cy="610" r="190" fill="none" stroke="#14b8a6" stroke-width="24" opacity="0.95" />
-    <circle cx="540" cy="610" r="112" fill="none" stroke="#f59e0b" stroke-width="22" opacity="0.95" />
-    <text x="540" y="595" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" text-anchor="middle">THREE</text>
-    <text x="540" y="635" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" text-anchor="middle">LAYERS</text>
+    <circle cx="540" cy="610" r="268" fill="#020617" opacity="0.74" stroke="#334155" stroke-width="2" />
+    ${rings.map((ring) => {
+      const circumference = Math.round(2 * Math.PI * ring.radius);
+      const score = ring.score ?? 0;
+      const active = Math.round((circumference * score) / 10);
+      return `
+        <circle cx="540" cy="610" r="${ring.radius}" fill="none" stroke="#1e293b" stroke-width="28" />
+        <circle cx="540" cy="610" r="${ring.radius}" fill="none" stroke="${ring.color}" stroke-width="28" stroke-linecap="round"
+          stroke-dasharray="${active} ${circumference - active}" transform="rotate(-90 540 610)" />
+      `;
+    }).join("")}
+    <text x="540" y="575" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="900" letter-spacing="2" text-anchor="middle">OVERALL</text>
+    <text x="540" y="655" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="76" font-weight="900" text-anchor="middle">${escapeXml(overallScore)}</text>
+    ${rings.map((ring, index) => `
+      <rect x="${132 + index * 272}" y="835" width="226" height="58" rx="10" fill="#0f172a" opacity="0.92" stroke="#334155" />
+      <circle cx="${158 + index * 272}" cy="869" r="7" fill="${ring.color}" />
+      <text x="${178 + index * 272}" y="863" fill="#e2e8f0" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900">${escapeXml(ring.label)}</text>
+      <text x="${178 + index * 272}" y="888" fill="#94a3b8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">${ring.score === null ? "Pending" : `${ring.score}/10`}</text>
+    `).join("")}
   `;
 }
 
@@ -181,7 +220,7 @@ function fallbackMorpho() {
   `;
 }
 
-function renderSvg(request: CardRenderRequest, backgroundDataUri: string, ringsDataUri: string, morphoDataUri: string) {
+function renderSvg(request: CardRenderRequest, backgroundDataUri: string, morphoDataUri: string) {
   const cardType = request.cardType || "hero";
   const title = text(request.title, "Greybrainer Review");
   const subtitle = text(request.subtitle, "Three-Layer Movie Analysis");
@@ -229,9 +268,7 @@ function renderSvg(request: CardRenderRequest, backgroundDataUri: string, ringsD
       ${brandHeader()}
       <text x="70" y="250" fill="#ffffff" font-family="Inter, Arial, sans-serif" font-size="60" font-weight="900">THREE-LAYER SCORE</text>
       <rect x="80" y="340" width="920" height="560" rx="28" fill="#020617" opacity="0.78" stroke="#334155" filter="url(#shadow)" />
-      ${ringsDataUri
-        ? `<image href="${ringsDataUri}" x="120" y="375" width="840" height="490" preserveAspectRatio="xMidYMid meet" />`
-        : fallbackRings()}
+      ${scoreRings(scoreRows, overallScore)}
       <rect x="90" y="950" width="900" height="190" rx="18" fill="#0f172a" opacity="0.88" stroke="#334155" />
       ${bulletText(scoreRows, 130, 1018)}
     `;
@@ -293,12 +330,11 @@ export async function POST(request: Request) {
 
   try {
     const payload = (await request.json()) as CardRenderRequest;
-    const [backgroundDataUri, ringsDataUri, morphoDataUri] = await Promise.all([
+    const [backgroundDataUri, morphoDataUri] = await Promise.all([
       imageDataUri(payload.backgroundUrl),
-      imageDataUri(payload.ringsUrl),
       imageDataUri(payload.morphoUrl),
     ]);
-    const svg = renderSvg(payload, backgroundDataUri, ringsDataUri, morphoDataUri);
+    const svg = renderSvg(payload, backgroundDataUri, morphoDataUri);
     const { default: sharp } = await import("sharp");
     const png = await sharp(Buffer.from(svg)).png().toBuffer();
     const body = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer;
