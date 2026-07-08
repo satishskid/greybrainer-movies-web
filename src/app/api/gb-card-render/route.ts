@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { getHubRole } from "@/lib/hubRoles";
 
 export const dynamic = "force-dynamic";
@@ -300,6 +299,7 @@ export async function POST(request: Request) {
       imageDataUri(payload.morphoUrl),
     ]);
     const svg = renderSvg(payload, backgroundDataUri, ringsDataUri, morphoDataUri);
+    const { default: sharp } = await import("sharp");
     const png = await sharp(Buffer.from(svg)).png().toBuffer();
     const body = png.buffer.slice(png.byteOffset, png.byteOffset + png.byteLength) as ArrayBuffer;
 
