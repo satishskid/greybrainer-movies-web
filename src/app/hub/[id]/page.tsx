@@ -4,7 +4,7 @@ import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon, Download } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -45,9 +45,40 @@ interface ResearchDoc {
   faqs?: ArticleFaq[];
   relatedSlugs?: string[];
   inlineImageUrls?: string[];
+  gbCardImageUrl?: string;
+  gbCardUrls?: Record<string, string>;
 }
 
 const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in").replace(/\/$/, "");
+
+type GbCardType = "hero" | "rings" | "morpho" | "verdict";
+
+const GB_CARD_DEFS: Array<{
+  type: GbCardType;
+  label: string;
+  description: string;
+}> = [
+  {
+    type: "hero",
+    label: "Hero Review Card",
+    description: "Main post image with title, Greybrainer brand, and overall score.",
+  },
+  {
+    type: "rings",
+    label: "Three-Layer Score Card",
+    description: "Uses the engine ring visual and the review layer scores.",
+  },
+  {
+    type: "morpho",
+    label: "Morphokinetics Card",
+    description: "Uses the engine Morphokinetics visual and public teaser.",
+  },
+  {
+    type: "verdict",
+    label: "Verdict Card",
+    description: "Uses the 50-word verdict, who-should-watch, and maker insight.",
+  },
+];
 
 function slugify(text: string): string {
   return text
@@ -163,7 +194,7 @@ function ArticleEditor({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [uploadingAsset, setUploadingAsset] = useState(false);
-  const [activeTab, setActiveTab] = useState<"article" | "seo" | "social" | "assets">("article");
+  const [activeTab, setActiveTab] = useState<"article" | "seo" | "cards" | "social" | "assets">("article");
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
@@ -183,9 +214,12 @@ function ArticleEditor({
   const [faqs, setFaqs] = useState<ArticleFaq[]>([{ question: "", answer: "" }]);
   const [inlineImageUrls, setInlineImageUrls] = useState("");
   const [relatedSlugs, setRelatedSlugs] = useState("");
+  const [gbCardImageUrl, setGbCardImageUrl] = useState("");
+  const [gbCardUrls, setGbCardUrls] = useState<Record<string, string>>({});
   const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
   const [saveMsg, setSaveMsg] = useState("");
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [generatingGbCard, setGeneratingGbCard] = useState<GbCardType | "all" | null>(null);
   const [geminiKey, setGeminiKey] = useState("");
 
   useEffect(() => {
@@ -233,6 +267,8 @@ function ArticleEditor({
           ];
           setInlineImageUrls(mergedInlineUrls.join("\n"));
           setRelatedSlugs((data.relatedSlugs || []).join("\n"));
+          setGbCardImageUrl(data.gbCardImageUrl || "");
+          setGbCardUrls(data.gbCardUrls || {});
         }
       } catch (err) {
         console.error("Failed to load article:", err);
@@ -262,6 +298,8 @@ function ArticleEditor({
     faqs: cleanFaqs(faqs),
     inlineImageUrls: linesToArray(inlineImageUrls),
     relatedSlugs: linesToArray(relatedSlugs).map(normalizeSlug).filter(Boolean),
+    gbCardImageUrl,
+    gbCardUrls,
     updatedAt: new Date(),
   });
 
@@ -337,7 +375,7 @@ function ArticleEditor({
     );
   };
 
-  const handleUploadImage = async (file: File, target: "cover" | "inline") => {
+  const handleUploadImage = async (file: File, target: "cover" | "inline" | "gb-card-context") => {
     if (!article) return;
     setUploadingAsset(true);
     setSaveMsg("");
@@ -362,10 +400,16 @@ function ArticleEditor({
       const url = payload.url;
       if (target === "cover") {
         setCoverImageUrl(url);
+      } else if (target === "gb-card-context") {
+        setGbCardImageUrl(url);
+        await updateDoc(doc(db, "published_research", article.id), {
+          gbCardImageUrl: url,
+          updatedAt: new Date(),
+        });
       } else {
         setInlineImageUrls((current) => (current ? `${current}\n${url}` : url));
       }
-      setSaveMsg("Image uploaded to R2. Save draft to keep it.");
+      setSaveMsg(target === "gb-card-context" ? "Movie card image uploaded." : "Image uploaded to R2. Save draft to keep it.");
     } catch (error) {
       console.error("Image upload failed:", error);
       setSaveMsg(error instanceof Error ? error.message : "Image upload failed.");
@@ -420,6 +464,107 @@ function ArticleEditor({
       return [...existing, url].join("\n");
     });
     setSaveMsg("Added to article visuals. Save draft to keep it.");
+  };
+
+  const uploadGeneratedGbCard = async (cardType: GbCardType, blob: Blob) => {
+    if (!article) throw new Error("Article is not loaded.");
+
+    const formData = new FormData();
+    formData.append("draftId", article.id);
+    formData.append("kind", `gb-card-${cardType}`);
+    formData.append("file", new File([blob], `${slugify(article.title)}-${cardType}-gb-card.png`, { type: "image/png" }));
+
+    const token = await user.getIdToken();
+    const response = await fetch("/api/r2-upload", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const payload = (await response.json()) as { url?: string; error?: string };
+
+    if (!response.ok || !payload.url) {
+      throw new Error(payload.error || "Card upload failed.");
+    }
+
+    return payload.url;
+  };
+
+  const buildGbCardPayload = (cardType: GbCardType) => {
+    if (!article) return null;
+
+    const currentScoreRows = [
+      storyScore.trim() ? `Story/Script: ${storyScore.trim()}` : "",
+      conceptScore.trim() ? `Concept: ${conceptScore.trim()}` : "",
+      executionScore.trim() ? `Execution: ${executionScore.trim()}` : "",
+      overallScore.trim() ? `Overall: ${overallScore.trim()}` : "",
+    ].filter(Boolean);
+
+    return {
+      cardType,
+      title: searchHeadline || article.title,
+      subtitle: isBriefType(article.type) ? "Greybrainer Lens Brief" : "Three-Layer Movie Analysis",
+      verdict: verdict || firstWords(editedEditorial || editedContent || article.content || article.title, 50),
+      whoShouldWatch,
+      overallScore: overallScore || "GB",
+      scoreRows: currentScoreRows,
+      morphoLine: morphokineticsTeaser,
+      producerLine: producerInsight,
+      liveUrl: `${PUBLIC_SITE_URL}/reviews/${article.slug || slugify(searchHeadline || article.title)}`,
+      backgroundUrl: gbCardImageUrl || coverImageUrl,
+      ringsUrl: article.images?.rings || "",
+      morphoUrl: article.images?.morpho || "",
+    };
+  };
+
+  const handleGenerateGbCard = async (cardType: GbCardType, manageSpinner = true) => {
+    if (!article) return;
+    const payload = buildGbCardPayload(cardType);
+    if (!payload) return;
+
+    if (manageSpinner) setGeneratingGbCard(cardType);
+    setSaveMsg("");
+    try {
+      const renderResponse = await fetch("/api/gb-card-render", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!renderResponse.ok) {
+        const error = await renderResponse.json().catch(() => ({ error: "Card render failed." }));
+        throw new Error(error.error || "Card render failed.");
+      }
+
+      const blob = await renderResponse.blob();
+      const url = await uploadGeneratedGbCard(cardType, blob);
+      const nextUrls = { ...gbCardUrls, [cardType]: url };
+      setGbCardUrls(nextUrls);
+      await updateDoc(doc(db, "published_research", article.id), {
+        gbCardUrls: nextUrls,
+        updatedAt: new Date(),
+      });
+      setSaveMsg(`${GB_CARD_DEFS.find((card) => card.type === cardType)?.label || "GB card"} generated.`);
+    } catch (error) {
+      console.error("GB card generation failed:", error);
+      setSaveMsg(error instanceof Error ? error.message : "GB card generation failed.");
+    } finally {
+      if (manageSpinner) setGeneratingGbCard(null);
+    }
+  };
+
+  const handleGenerateAllGbCards = async () => {
+    setGeneratingGbCard("all");
+    try {
+      for (const card of GB_CARD_DEFS) {
+        await handleGenerateGbCard(card.type, false);
+      }
+      setSaveMsg("GB template card pack generated.");
+    } finally {
+      setGeneratingGbCard(null);
+    }
   };
 
   if (loading) {
@@ -491,6 +636,9 @@ function ArticleEditor({
     twitter: trackedUrl(liveUrl, "x", campaign),
     medium: trackedUrl(liveUrl, "medium", campaign),
   };
+  const gbCardLinkText = GB_CARD_DEFS
+    .map((card) => `${card.label}\n${gbCardUrls[card.type] || "Generate this card in the GB Cards tab."}`)
+    .join("\n\n");
   const socialDefaults = {
     linkedin:
       `Most reviews ask whether ${article.title} is good.\nGreybrainer asks what kind of audience energy it creates.\n\n${socialVerdict}\n\nThree signals:\n${scoreBlock}\n\nProducer/director signal:\n${producerLine}\n\nWhat would you rather know before watching: the rating, or where attention starts shifting?\n\nRead the full review: ${channelLinks.linkedin}\n\n${hashtags}`,
@@ -511,6 +659,7 @@ function ArticleEditor({
       `Cover image alt text\n${article.title} cover image for a Greybrainer movie analysis.\n\nThree-layer image alt text\n${article.title} Greybrainer three-layer score visualization covering story/script, concept, execution, and overall signal.\n\nMorphokinetics image alt text\n${article.title} Morphokinetics visualization showing attention, emotional momentum, tension, and release patterns.`,
     trackedLinks:
       `LinkedIn\n${channelLinks.linkedin}\n\nInstagram bio/story\n${channelLinks.instagram}\n\nFacebook\n${channelLinks.facebook}\n\nX\n${channelLinks.twitter}\n\nMedium canonical note\n${channelLinks.medium}`,
+    gbCardLinks: gbCardLinkText,
   };
   const socialOutputs = [
     { channel: "linkedin", label: "LinkedIn Insight Post", text: article.socials?.linkedin || socialDefaults.linkedin },
@@ -522,6 +671,7 @@ function ArticleEditor({
     { channel: "medium", label: "Medium Syndication Note", text: article.socials?.medium || socialDefaults.medium },
     { channel: "hashtags", label: "Hashtag Set", text: socialDefaults.hashtags },
     { channel: "alt-text", label: "Image Alt Text", text: socialDefaults.altText },
+    { channel: "gb-card-links", label: "GB Template Card URLs", text: socialDefaults.gbCardLinks },
     { channel: "tracked-links", label: "Tracked Links", text: socialDefaults.trackedLinks },
   ];
   const inlineUrlSet = new Set(linesToArray(inlineImageUrls));
@@ -529,6 +679,8 @@ function ArticleEditor({
     { key: "rings", label: "Three-Layer Ring Image", url: article.images?.rings },
     { key: "morpho", label: "Morphokinetics Graph", url: article.images?.morpho },
   ].filter((asset): asset is { key: string; label: string; url: string } => Boolean(asset.url));
+  const gbCardImageSource = gbCardImageUrl || coverImageUrl;
+  const generatedCardCount = GB_CARD_DEFS.filter((card) => gbCardUrls[card.type]).length;
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
@@ -630,7 +782,7 @@ function ArticleEditor({
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-8 pt-6">
         <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 w-fit mb-6">
-          {(["article", "seo", "social", "assets"] as const).map((tab) => (
+          {(["article", "seo", "cards", "social", "assets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -644,9 +796,11 @@ function ArticleEditor({
                 ? "Article Editor"
                 : tab === "seo"
                   ? "Website SEO"
-                  : tab === "social"
-                    ? "Social Posts"
-                    : "Assets & Images"}
+                  : tab === "cards"
+                    ? "GB Cards"
+                    : tab === "social"
+                      ? "Social Posts"
+                      : "Assets & Images"}
             </button>
           ))}
         </div>
@@ -978,6 +1132,157 @@ function ArticleEditor({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "cards" && (
+          <div className="mb-12 space-y-8">
+            <div className="rounded-lg border border-red-500/30 bg-slate-800 p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <h2 className="text-2xl font-bold text-white">Greybrainer Template Cards</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Upload one contextual movie image. The card pack then uses the review headline, 50-word verdict,
+                    layer scores, three-ring visual, Morphokinetics graph, and public website URL.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <label className="inline-flex cursor-pointer items-center rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600">
+                      {uploadingAsset ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                      Upload Movie Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingAsset}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void handleUploadImage(file, "gb-card-context");
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={handleGenerateAllGbCards}
+                      disabled={generatingGbCard !== null}
+                      className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:bg-red-900"
+                    >
+                      {generatingGbCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                      Make Draft in GB Template
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-900 p-3">
+                  <div className="aspect-[4/5] overflow-hidden rounded-md bg-slate-950">
+                    {gbCardImageSource ? (
+                      <img src={gbCardImageSource} alt="Movie card source" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
+                        Upload a movie screenshot, poster crop, or contextual still.
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Generated cards ready: {generatedCardCount}/{GB_CARD_DEFS.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {GB_CARD_DEFS.map((card) => {
+                const generatedUrl = gbCardUrls[card.type];
+                const isGenerating = generatingGbCard === card.type || generatingGbCard === "all";
+                return (
+                  <div key={card.type} className="rounded-lg border border-slate-700 bg-slate-800 p-5">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{card.label}</h3>
+                        <p className="mt-1 text-sm text-slate-400">{card.description}</p>
+                      </div>
+                      <button
+                        onClick={() => void handleGenerateGbCard(card.type)}
+                        disabled={generatingGbCard !== null}
+                        className="inline-flex shrink-0 items-center rounded-md bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
+                      >
+                        {isGenerating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" />}
+                        Generate
+                      </button>
+                    </div>
+
+                    <div className="overflow-hidden rounded-md border border-slate-700 bg-slate-950">
+                      {generatedUrl ? (
+                        <img src={generatedUrl} alt={`${card.label} preview`} className="aspect-[4/5] h-auto w-full object-cover" />
+                      ) : (
+                        <div
+                          className="relative aspect-[4/5] overflow-hidden bg-slate-950 p-7"
+                          style={{
+                            backgroundImage: gbCardImageSource
+                              ? `linear-gradient(180deg, rgba(2, 6, 23, 0.45), rgba(2, 6, 23, 0.95)), url("${gbCardImageSource}")`
+                              : "linear-gradient(135deg, #020617, #111827 55%, #450a0a)",
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        >
+                          <div className="relative z-10 flex h-full flex-col justify-between">
+                            <div>
+                              <p className="text-xl font-black tracking-wide text-red-500">GREYBRAINER</p>
+                              <p className="mt-1 text-xs font-bold uppercase tracking-[0.28em] text-slate-300">Movie Analysis</p>
+                            </div>
+                            <div>
+                              <p className="mb-3 w-fit rounded bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                                {card.type === "hero" ? "Three-Layer Review" : card.type === "rings" ? "Three-Layer Score" : card.type === "morpho" ? "Morphokinetics" : "Verdict"}
+                              </p>
+                              <p className="text-4xl font-black leading-tight text-white">{plainText(titleForSocial, 86)}</p>
+                              <p className="mt-4 max-w-sm text-sm leading-6 text-slate-200">
+                                {card.type === "rings"
+                                  ? scoreRows.join(" | ") || "Layer scores will appear here."
+                                  : card.type === "morpho"
+                                    ? morphoLine
+                                    : card.type === "verdict"
+                                      ? socialVerdict
+                                      : `Overall score: ${overallScore || "GB"}`}
+                              </p>
+                            </div>
+                            <p className="text-sm font-bold text-slate-200">movies.greybrain.in</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      {generatedUrl && (
+                        <>
+                          <a
+                            href={generatedUrl}
+                            download={`${slugify(article.title)}-${card.type}-gb-card.png`}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                          >
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                            Download
+                          </a>
+                          <button
+                            onClick={() => copyToClipboard(generatedUrl, `gb-card-${card.type}`)}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                          >
+                            {copiedChannel === `gb-card-${card.type}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                            {copiedChannel === `gb-card-${card.type}` ? "Copied" : "Copy URL"}
+                          </button>
+                          <button
+                            onClick={() => addAssetToInlineImages(generatedUrl)}
+                            disabled={inlineUrlSet.has(generatedUrl)}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-50"
+                          >
+                            <Plus className="mr-1.5 h-3.5 w-3.5" />
+                            {inlineUrlSet.has(generatedUrl) ? "In Article" : "Add to Article"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
