@@ -47,7 +47,9 @@ If sign-in fails, first check Firebase Authentication authorized domains and the
 7. Writer previews the article.
 8. Writer publishes to the website.
 9. Writer opens the Social tab.
-10. Writer manually copies and posts the prepared channel pack from the Hub Social tab to Medium, LinkedIn, X, Instagram, and Facebook.
+10. Writer reviews the per-channel previews for LinkedIn, Instagram, Facebook, and X.
+11. Writer approves the channels that are ready.
+12. If a publisher endpoint is connected, writer clicks Publish Approved. Otherwise, writer uses the same approved previews to copy text, download images, and post manually.
 
 The daily newsletter is intentionally writer-led. Do not run it through the Engine unless the writer specifically asks for a deep review topic to be analyzed.
 
@@ -64,7 +66,8 @@ The daily newsletter is intentionally writer-led. Do not run it through the Engi
 9. Writer opens the new engine draft.
 10. Writer edits the article into final website format.
 11. Writer publishes to the website.
-12. Writer manually posts the channel-specific social pack from the Hub Social tab.
+12. Writer opens the Social tab.
+13. Writer reviews each channel preview, approves the ready channels, and either clicks Publish Approved if a publisher endpoint is connected or posts manually from the approved pack.
 
 ## Required Deep Review Format
 
@@ -101,7 +104,7 @@ Every published deep review should include:
 
 - Writer newsletter creation.
 - Selection of deep review topics from the newsletter.
-- Social posting to Medium, LinkedIn, X, Instagram, and Facebook.
+- Direct social posting until a publisher endpoint is connected.
 - Final editorial judgment before publishing.
 
 ## What Is Automated Today
@@ -120,6 +123,9 @@ Every published deep review should include:
   - Hashtag set.
   - Image alt text.
   - UTM-tracked links.
+- Hub shows per-channel social previews for LinkedIn, Instagram, Facebook, and X.
+- Hub lets the writer approve channels before social publishing.
+- Hub can send approved channel payloads to a protected publisher endpoint when the tech team connects one.
 - SEO metadata and JSON-LD are generated from article fields.
 - Canonicals, Open Graph URLs, robots Host, and sitemap point to `https://movies.greybrain.in`.
 
@@ -135,7 +141,9 @@ Every published deep review should include:
 - FAQs are filled.
 - Related links are added when available.
 - Preview looks clean on article page.
-- Social tab channel pack is ready before manual posting.
+- Social tab previews are checked.
+- Intended channels are approved.
+- If automated publishing is configured, Publish Approved succeeds. If not, copied text and downloaded images are posted manually.
 
 ## Release Notes
 

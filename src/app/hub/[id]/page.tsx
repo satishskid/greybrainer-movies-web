@@ -4,7 +4,7 @@ import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon, Download } from "lucide-react";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon, Download, ExternalLink, Send, CheckCircle2, AlertTriangle, Settings, Smartphone } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -52,6 +52,19 @@ interface ResearchDoc {
 const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in").replace(/\/$/, "");
 
 type GbCardType = "hero" | "rings" | "morpho" | "verdict";
+type SocialPreviewKey = "linkedin" | "instagram" | "facebook" | "twitter";
+
+interface SocialPreviewChannel {
+  channel: SocialPreviewKey;
+  label: string;
+  profileLabel: string;
+  profileUrl: string;
+  text: string;
+  assetUrl?: string;
+  assetLabel: string;
+  trackedUrl: string;
+  format: string;
+}
 
 const GB_CARD_DEFS: Array<{
   type: GbCardType;
@@ -79,6 +92,13 @@ const GB_CARD_DEFS: Array<{
     description: "Uses the 50-word verdict, who-should-watch, and maker insight.",
   },
 ];
+
+const SOCIAL_PROFILE_URLS: Record<SocialPreviewKey, string> = {
+  linkedin: "https://www.linkedin.com/company/greybrainer/",
+  instagram: "https://www.instagram.com/greybrainlens/",
+  facebook: "https://www.facebook.com/share/1DmapQ7Hw3/",
+  twitter: "https://x.com/Greybrainlens",
+};
 
 function slugify(text: string): string {
   return text
@@ -221,11 +241,20 @@ function ArticleEditor({
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatingGbCard, setGeneratingGbCard] = useState<GbCardType | "all" | null>(null);
   const [geminiKey, setGeminiKey] = useState("");
+  const [approvedSocialChannels, setApprovedSocialChannels] = useState<Record<string, boolean>>({});
+  const [publishingSocial, setPublishingSocial] = useState(false);
+  const [publisherUrl, setPublisherUrl] = useState("");
+  const [publisherToken, setPublisherToken] = useState("");
+  const [showPublisherSettings, setShowPublisherSettings] = useState(false);
 
   useEffect(() => {
     window.setTimeout(() => {
       const savedKey = localStorage.getItem("gemini_api_key");
       if (savedKey) setGeminiKey(savedKey);
+      const savedPublisherUrl = localStorage.getItem("social_publisher_url");
+      if (savedPublisherUrl) setPublisherUrl(savedPublisherUrl);
+      const savedPublisherToken = localStorage.getItem("social_publisher_token");
+      if (savedPublisherToken) setPublisherToken(savedPublisherToken);
     }, 0);
   }, []);
 
@@ -233,6 +262,18 @@ function ArticleEditor({
     const val = e.target.value;
     setGeminiKey(val);
     localStorage.setItem("gemini_api_key", val);
+  };
+
+  const handlePublisherUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPublisherUrl(val);
+    localStorage.setItem("social_publisher_url", val);
+  };
+
+  const handlePublisherTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPublisherToken(val);
+    localStorage.setItem("social_publisher_token", val);
   };
 
   useEffect(() => {
@@ -674,6 +715,55 @@ function ArticleEditor({
     { channel: "gb-card-links", label: "GB Template Card URLs", text: socialDefaults.gbCardLinks },
     { channel: "tracked-links", label: "Tracked Links", text: socialDefaults.trackedLinks },
   ];
+  const primaryFeedAsset = gbCardUrls.hero || coverImageUrl || gbCardImageUrl;
+  const verdictAsset = gbCardUrls.verdict || primaryFeedAsset;
+  const carouselAsset = gbCardUrls.rings || gbCardUrls.morpho || primaryFeedAsset;
+  const socialPreviewChannels: SocialPreviewChannel[] = [
+    {
+      channel: "linkedin",
+      label: "LinkedIn",
+      profileLabel: "Greybrainer company page",
+      profileUrl: SOCIAL_PROFILE_URLS.linkedin,
+      text: article.socials?.linkedin || socialDefaults.linkedin,
+      assetUrl: primaryFeedAsset,
+      assetLabel: primaryFeedAsset ? "Hero Review Card" : "No image selected",
+      trackedUrl: channelLinks.linkedin,
+      format: "Professional insight post + 4:5 feed image",
+    },
+    {
+      channel: "instagram",
+      label: "Instagram",
+      profileLabel: "@greybrainlens",
+      profileUrl: SOCIAL_PROFILE_URLS.instagram,
+      text: article.socials?.instagram || socialDefaults.instagram,
+      assetUrl: carouselAsset,
+      assetLabel: carouselAsset ? "Carousel cover / GB Card" : "No image selected",
+      trackedUrl: channelLinks.instagram,
+      format: "Carousel caption + 4:5 image",
+    },
+    {
+      channel: "facebook",
+      label: "Facebook",
+      profileLabel: "Greybrainer page",
+      profileUrl: SOCIAL_PROFILE_URLS.facebook,
+      text: article.socials?.facebook || socialDefaults.facebook,
+      assetUrl: verdictAsset,
+      assetLabel: verdictAsset ? "Verdict Card" : "No image selected",
+      trackedUrl: channelLinks.facebook,
+      format: "Discussion post + 4:5 feed image",
+    },
+    {
+      channel: "twitter",
+      label: "X",
+      profileLabel: "@Greybrainlens",
+      profileUrl: SOCIAL_PROFILE_URLS.twitter,
+      text: article.socials?.twitter || socialDefaults.twitter,
+      assetUrl: verdictAsset,
+      assetLabel: verdictAsset ? "Verdict/Hero Card" : "No image selected",
+      trackedUrl: channelLinks.twitter,
+      format: "Short post + image",
+    },
+  ];
   const inlineUrlSet = new Set(linesToArray(inlineImageUrls));
   const diagnosticAssets = [
     { key: "rings", label: "Three-Layer Ring Image", url: article.images?.rings },
@@ -681,6 +771,75 @@ function ArticleEditor({
   ].filter((asset): asset is { key: string; label: string; url: string } => Boolean(asset.url));
   const gbCardImageSource = gbCardImageUrl || coverImageUrl;
   const generatedCardCount = GB_CARD_DEFS.filter((card) => gbCardUrls[card.type]).length;
+  const approvedSocialCount = socialPreviewChannels.filter((preview) => approvedSocialChannels[preview.channel]).length;
+
+  const setAllSocialApprovals = (approved: boolean) => {
+    setApprovedSocialChannels(
+      Object.fromEntries(socialPreviewChannels.map((preview) => [preview.channel, approved])),
+    );
+  };
+
+  const toggleSocialApproval = (channel: SocialPreviewKey) => {
+    setApprovedSocialChannels((current) => ({ ...current, [channel]: !current[channel] }));
+  };
+
+  const handlePublishApprovedSocial = async () => {
+    if (!article) return;
+
+    if (article.status !== "published") {
+      setSaveMsg("Publish to Site first so social links do not 404.");
+      return;
+    }
+
+    const approvedChannels = socialPreviewChannels.filter((preview) => approvedSocialChannels[preview.channel]);
+    if (!approvedChannels.length) {
+      setSaveMsg("Approve at least one social channel first.");
+      return;
+    }
+
+    if (!publisherUrl.trim()) {
+      setShowPublisherSettings(true);
+      setSaveMsg("Connect a publisher endpoint first. Manual copy pack is ready below.");
+      return;
+    }
+
+    setPublishingSocial(true);
+    setSaveMsg("");
+    try {
+      const response = await fetch("/api/social-publish", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          articleId: article.id,
+          title: titleForSocial,
+          liveUrl,
+          publisherUrl: publisherUrl.trim(),
+          publisherToken: publisherToken.trim(),
+          channels: approvedChannels.map((preview) => ({
+            channel: preview.channel,
+            label: preview.label,
+            text: preview.text,
+            assetUrl: preview.assetUrl || "",
+            trackedUrl: preview.trackedUrl,
+            format: preview.format,
+          })),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; accepted?: boolean };
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error || "Social publisher rejected the request.");
+      }
+      setSaveMsg(`Publisher accepted ${approvedChannels.length} approved channel${approvedChannels.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error("Social publishing failed:", error);
+      setSaveMsg(error instanceof Error ? error.message : "Social publishing failed.");
+    } finally {
+      setPublishingSocial(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 pt-20">
@@ -1289,6 +1448,210 @@ function ArticleEditor({
 
         {activeTab === "social" && (
           <div className="mb-12 space-y-8">
+            <div className="rounded-lg border border-red-500/30 bg-slate-800 p-6">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Channel Preview & Approval</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                    Review how each post will appear, approve the channels, then publish the approved pack through the connected publisher.
+                    Website publishing should happen first so every social link opens the live article.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                      article.status === "published" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
+                    }`}>
+                      {article.status === "published" ? "Site link live" : "Publish site first"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-300">
+                      {approvedSocialCount}/{socialPreviewChannels.length} approved
+                    </span>
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                      publisherUrl.trim() ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-900 text-slate-400"
+                    }`}>
+                      {publisherUrl.trim() ? "Publisher connected" : "Manual-ready until connected"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+                  <button
+                    onClick={() => setAllSocialApprovals(true)}
+                    className="inline-flex items-center rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Approve All
+                  </button>
+                  <button
+                    onClick={() => setAllSocialApprovals(false)}
+                    className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setShowPublisherSettings((current) => !current)}
+                    className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Publisher Setup
+                  </button>
+                  <button
+                    onClick={handlePublishApprovedSocial}
+                    disabled={publishingSocial || approvedSocialCount === 0}
+                    className="inline-flex items-center rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-red-900"
+                  >
+                    {publishingSocial ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Publish Approved
+                  </button>
+                </div>
+              </div>
+
+              {showPublisherSettings && (
+                <div className="mt-6 grid grid-cols-1 gap-4 rounded-lg border border-slate-700 bg-slate-900 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Publisher endpoint
+                    </label>
+                    <input
+                      value={publisherUrl}
+                      onChange={handlePublisherUrlChange}
+                      placeholder="https://your-publisher-worker.example.com/publish"
+                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      API key / token
+                    </label>
+                    <input
+                      type="password"
+                      value={publisherToken}
+                      onChange={handlePublisherTokenChange}
+                      placeholder="Optional if endpoint does not need it"
+                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <p className="text-xs leading-5 text-slate-500 lg:col-span-2">
+                    This endpoint receives the approved channel JSON. Your tech person can connect it to Postiz, Publer, Minopa, a Cloudflare Worker, or a custom publisher.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              {socialPreviewChannels.map((preview) => {
+                const approved = Boolean(approvedSocialChannels[preview.channel]);
+                return (
+                  <div key={preview.channel} className={`rounded-lg border p-5 transition ${
+                    approved ? "border-emerald-500/50 bg-emerald-950/20" : "border-slate-700 bg-slate-800"
+                  }`}>
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{preview.label}</h3>
+                        <a
+                          href={preview.profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-flex items-center text-sm text-slate-400 transition hover:text-white"
+                        >
+                          {preview.profileLabel}
+                          <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                      <button
+                        onClick={() => toggleSocialApproval(preview.channel)}
+                        className={`inline-flex shrink-0 items-center rounded-md px-3 py-2 text-xs font-bold transition ${
+                          approved
+                            ? "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30"
+                            : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                        }`}
+                      >
+                        {approved ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
+                        {approved ? "Approved" : "Approve"}
+                      </button>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white">
+                            GB
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Greybrainer</p>
+                            <p className="text-xs text-slate-500">{preview.format}</p>
+                          </div>
+                        </div>
+                        <Smartphone className="h-4 w-4 text-slate-500" />
+                      </div>
+
+                      {preview.assetUrl ? (
+                        <div className="mb-4 overflow-hidden rounded-md border border-slate-800 bg-slate-900">
+                          <img src={preview.assetUrl} alt={`${preview.label} selected social asset`} className="aspect-[4/5] h-auto w-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="mb-4 flex aspect-[4/5] items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900 px-6 text-center text-sm text-slate-500">
+                          Generate GB Cards or upload a cover image before publishing this channel.
+                        </div>
+                      )}
+
+                      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-slate-900 p-4 text-sm leading-6 text-slate-300">
+                        {preview.text}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>{preview.text.length} characters</span>
+                        <span>•</span>
+                        <span>{preview.assetLabel}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => copyToClipboard(preview.text, `preview-${preview.channel}`)}
+                        className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                      >
+                        {copiedChannel === `preview-${preview.channel}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                        {copiedChannel === `preview-${preview.channel}` ? "Copied" : "Copy Text"}
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(preview.trackedUrl, `preview-link-${preview.channel}`)}
+                        className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                      >
+                        {copiedChannel === `preview-link-${preview.channel}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                        {copiedChannel === `preview-link-${preview.channel}` ? "Copied" : "Copy Link"}
+                      </button>
+                      {preview.assetUrl && (
+                        <a
+                          href={preview.assetUrl}
+                          download={`${slugify(article.title)}-${preview.channel}-social.png`}
+                          className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                        >
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                          Download Image
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <p className="text-sm leading-6 text-amber-100/90">
+                  The Publish Approved button needs a publisher endpoint before it can post directly. Without that, the writer can still approve,
+                  copy text, download the selected image, and post manually with no editing skill required.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-white">Manual Publishing Pack</h2>
+              <p className="mb-5 text-sm text-slate-400">
+                Backup copy blocks for the team. These remain useful even after automated publishing is connected.
+              </p>
+            </div>
             {socialOutputs.map(({ channel, label, text }) => (
               <div key={channel} className="bg-slate-800 rounded-lg border border-slate-700 p-6">
                 <div className="flex items-center justify-between mb-4">

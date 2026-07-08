@@ -32,9 +32,10 @@ The Hub is responsible for:
 - Refining engine-generated deep review drafts.
 - Uploading cover and inline images to R2.
 - Publishing articles to the public website.
-- Preparing a manual social pack for Medium, LinkedIn, X, Instagram, and Facebook.
+- Previewing and approving social posts for LinkedIn, Instagram, Facebook, and X.
+- Preparing a manual backup pack for Medium, LinkedIn, X, Instagram, and Facebook.
 
-Social posting is manual for now. The Hub generates copyable LinkedIn insight posts, carousel slide copy, X posts, Instagram carousel captions, Reel scripts, Facebook discussion posts, Medium notes, hashtags, image alt text, and UTM-tracked links.
+Social posting is manual until a publisher endpoint is connected. The Hub now shows per-channel previews, lets the writer approve channels, and can send the approved payload to `/api/social-publish`. It also keeps copyable LinkedIn insight posts, carousel slide copy, X posts, Instagram carousel captions, Reel scripts, Facebook discussion posts, Medium notes, hashtags, image alt text, GB card URLs, and UTM-tracked links.
 
 ## Engine Bridge
 
