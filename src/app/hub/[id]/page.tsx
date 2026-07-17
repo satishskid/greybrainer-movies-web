@@ -123,6 +123,21 @@ function firstWords(value: string, maxWords: number) {
   return plainText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(" ");
 }
 
+async function readUploadPayload(response: Response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text) as { url?: string; error?: string };
+  } catch {
+    return {
+      error: response.ok
+        ? "Upload returned an unreadable response."
+        : text.slice(0, 300) || `Upload failed with status ${response.status}.`,
+    };
+  }
+}
+
 function linesToArray(value: string) {
   return value
     .split(/\r?\n/)
@@ -432,7 +447,7 @@ function ArticleEditor({
         headers: { authorization: `Bearer ${token}` },
         body: formData,
       });
-      const payload = (await response.json()) as { url?: string; error?: string };
+      const payload = await readUploadPayload(response);
 
       if (!response.ok || !payload.url) {
         throw new Error(payload.error || "R2 upload failed.");
@@ -521,7 +536,7 @@ function ArticleEditor({
       headers: { authorization: `Bearer ${token}` },
       body: formData,
     });
-    const payload = (await response.json()) as { url?: string; error?: string };
+    const payload = await readUploadPayload(response);
 
     if (!response.ok || !payload.url) {
       throw new Error(payload.error || "Card upload failed.");
