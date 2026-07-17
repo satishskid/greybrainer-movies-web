@@ -344,7 +344,7 @@ function ArticleEditor({
     editorial: editedEditorial,
     content: editedContent,
     youtubeScript: editedYoutubeScript,
-    coverImageUrl,
+    coverImageUrl: coverImageUrl.trim(),
     seoTitle,
     seoDescription,
     searchHeadline,
@@ -386,6 +386,11 @@ function ArticleEditor({
     if (!article) return;
     if (isReferenceOnlyType(article.type)) {
       setSaveMsg("Reference only. Open the row marked PUBLISH THIS.");
+      return;
+    }
+    if (!coverImageUrl.trim()) {
+      setActiveTab("article");
+      setSaveMsg("Upload or paste a cover image before publishing so website thumbnails render.");
       return;
     }
     setPublishing(true);
@@ -461,16 +466,27 @@ function ArticleEditor({
       const url = payload.url;
       if (target === "cover") {
         setCoverImageUrl(url);
+        await updateDoc(doc(db, "published_research", article.id), {
+          coverImageUrl: url,
+          updatedAt: new Date(),
+        });
+        setSaveMsg("Cover image uploaded and saved for website thumbnail.");
       } else if (target === "gb-card-context") {
         setGbCardImageUrl(url);
         await updateDoc(doc(db, "published_research", article.id), {
           gbCardImageUrl: url,
           updatedAt: new Date(),
         });
+        setSaveMsg("Movie card image uploaded.");
       } else {
-        setInlineImageUrls((current) => (current ? `${current}\n${url}` : url));
+        const nextInlineUrls = [...linesToArray(inlineImageUrls), url];
+        setInlineImageUrls(nextInlineUrls.join("\n"));
+        await updateDoc(doc(db, "published_research", article.id), {
+          inlineImageUrls: nextInlineUrls,
+          updatedAt: new Date(),
+        });
+        setSaveMsg("Inline image uploaded and saved.");
       }
-      setSaveMsg(target === "gb-card-context" ? "Movie card image uploaded." : "Image uploaded to R2. Save draft to keep it.");
     } catch (error) {
       console.error("Image upload failed:", error);
       setSaveMsg(error instanceof Error ? error.message : "Image upload failed.");
