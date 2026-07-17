@@ -264,29 +264,42 @@ function WriterHubContent({
         relatedSlugs: [],
       });
 
-      let coverImageUrl = "";
-      const inlineImageUrls: string[] = [];
+      let uploadWarning = "";
 
-      if (newDraftCoverFile) {
-        coverImageUrl = await uploadDraftImage(docRef.id, newDraftCoverFile, "cover");
-      }
+      try {
+        let coverImageUrl = "";
+        const inlineImageUrls: string[] = [];
 
-      for (const file of newDraftInlineFiles) {
-        inlineImageUrls.push(await uploadDraftImage(docRef.id, file, "inline"));
-      }
+        if (newDraftCoverFile) {
+          coverImageUrl = await uploadDraftImage(docRef.id, newDraftCoverFile, "cover");
+        }
 
-      if (coverImageUrl || inlineImageUrls.length > 0) {
-        await updateDoc(doc(db, "published_research", docRef.id), {
-          ...(coverImageUrl ? { coverImageUrl } : {}),
-          inlineImageUrls,
-          updatedAt: new Date(),
-        });
+        for (const file of newDraftInlineFiles) {
+          inlineImageUrls.push(await uploadDraftImage(docRef.id, file, "inline"));
+        }
+
+        if (coverImageUrl || inlineImageUrls.length > 0) {
+          await updateDoc(doc(db, "published_research", docRef.id), {
+            ...(coverImageUrl ? { coverImageUrl } : {}),
+            inlineImageUrls,
+            updatedAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error("Manual draft image upload failed:", error);
+        uploadWarning = error instanceof Error ? error.message : "Image upload failed.";
       }
 
       setNewDraftTitle("");
       setNewDraftContent("");
       setNewDraftCoverFile(null);
       setNewDraftInlineFiles([]);
+      if (uploadWarning) {
+        window.sessionStorage.setItem(
+          "hub_draft_notice",
+          `Draft created, but image upload needs retry: ${uploadWarning} Use Upload Cover or Upload Inline Image in the editor.`,
+        );
+      }
       router.push(`/hub/${docRef.id}`);
     } catch (error) {
       console.error("Manual draft creation failed:", error);

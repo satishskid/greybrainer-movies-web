@@ -252,7 +252,12 @@ function ArticleEditor({
   const [gbCardImageUrl, setGbCardImageUrl] = useState("");
   const [gbCardUrls, setGbCardUrls] = useState<Record<string, string>>({});
   const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [saveMsg, setSaveMsg] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const notice = window.sessionStorage.getItem("hub_draft_notice") || "";
+    if (notice) window.sessionStorage.removeItem("hub_draft_notice");
+    return notice;
+  });
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
   const [generatingGbCard, setGeneratingGbCard] = useState<GbCardType | "all" | null>(null);
   const [geminiKey, setGeminiKey] = useState("");
