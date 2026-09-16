@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck, Plus, Upload, X, RefreshCw } from "lucide-react";
@@ -100,6 +100,29 @@ function WriterHubContent({
   const [creatingDraft, setCreatingDraft] = useState(false);
   const [createError, setCreateError] = useState("");
   const [fetchError, setFetchError] = useState("");
+  const [hubTab, setHubTab] = useState<"all" | "inbox" | "drafts" | "published" | "analytics">("all");
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  const filteredItems = useMemo(() => {
+    if (hubTab === "inbox") {
+      return items.filter((i) => isReferenceOnly(i) || i.status === "inbox");
+    }
+    if (hubTab === "drafts") {
+      return items.filter((i) => !isReferenceOnly(i) && (i.status === "draft" || (!i.publishedAt && i.status !== "published")));
+    }
+    if (hubTab === "published") {
+      return items.filter((i) => !isReferenceOnly(i) && (i.status === "published" || Boolean(i.publishedAt)));
+    }
+    return items;
+  }, [items, hubTab]);
+
+  const libraryStats = useMemo(() => {
+    const total = items.length;
+    const inbox = items.filter((i) => isReferenceOnly(i) || i.status === "inbox").length;
+    const drafts = items.filter((i) => !isReferenceOnly(i) && (i.status === "draft" || (!i.publishedAt && i.status !== "published"))).length;
+    const published = items.filter((i) => !isReferenceOnly(i) && (i.status === "published" || Boolean(i.publishedAt))).length;
+    return { total, inbox, drafts, published };
+  }, [items]);
 
   async function fetchResearch() {
     setLoading(true);
@@ -314,19 +337,64 @@ function WriterHubContent({
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900/50 border-r border-slate-800 p-6 flex flex-col hidden md:flex">
         <h2 className="text-xl font-bold text-white mb-8">Writer Hub</h2>
-        <nav className="space-y-4">
-          <a href="#" className="flex items-center text-red-400 font-medium">
-            <FileText className="w-5 h-5 mr-3" /> Inbox (Raw AI)
-          </a>
-          <a href="#" className="flex items-center text-slate-400 hover:text-slate-200 transition">
-            <PenTool className="w-5 h-5 mr-3" /> Drafts
-          </a>
-          <a href="#" className="flex items-center text-slate-400 hover:text-slate-200 transition">
-            <Layers className="w-5 h-5 mr-3" /> Published
-          </a>
-          <a href="#" className="flex items-center text-slate-400 hover:text-slate-200 transition">
-            <BarChart className="w-5 h-5 mr-3" /> Analytics
-          </a>
+        <nav className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setHubTab("all")}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition ${
+              hubTab === "all" ? "bg-slate-800 text-white font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+            }`}
+          >
+            <div className="flex items-center">
+              <Layers className="w-4 h-4 mr-3" /> All Content
+            </div>
+            <span className="text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 font-mono">{libraryStats.total}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setHubTab("inbox")}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition ${
+              hubTab === "inbox" ? "bg-red-600/20 text-red-400 font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+            }`}
+          >
+            <div className="flex items-center">
+              <FileText className="w-4 h-4 mr-3" /> Inbox (Raw AI)
+            </div>
+            <span className="text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 font-mono">{libraryStats.inbox}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setHubTab("drafts")}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition ${
+              hubTab === "drafts" ? "bg-amber-600/20 text-amber-400 font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+            }`}
+          >
+            <div className="flex items-center">
+              <PenTool className="w-4 h-4 mr-3" /> Drafts
+            </div>
+            <span className="text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 font-mono">{libraryStats.drafts}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setHubTab("published")}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm transition ${
+              hubTab === "published" ? "bg-green-600/20 text-green-400 font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+            }`}
+          >
+            <div className="flex items-center">
+              <ShieldCheck className="w-4 h-4 mr-3" /> Published
+            </div>
+            <span className="text-xs bg-slate-900 px-2 py-0.5 rounded text-slate-400 font-mono">{libraryStats.published}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setHubTab("analytics")}
+            className={`w-full flex items-center px-3.5 py-2.5 rounded-xl text-sm transition ${
+              hubTab === "analytics" ? "bg-indigo-600/20 text-indigo-400 font-semibold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
+            }`}
+          >
+            <BarChart className="w-4 h-4 mr-3" /> Analytics &amp; Telemetry
+          </button>
         </nav>
         
         <div className="mt-auto space-y-4">
@@ -337,9 +405,13 @@ function WriterHubContent({
             </div>
             <p className="mt-2 truncate text-xs text-slate-400">{user.email}</p>
           </div>
-          <a href="#" className="flex items-center text-slate-400 hover:text-slate-200 transition">
-            <Settings className="w-5 h-5 mr-3" /> Settings
-          </a>
+          <button
+            type="button"
+            onClick={() => setShowSettingsModal(true)}
+            className="flex items-center text-slate-400 hover:text-slate-200 transition text-sm w-full px-2 py-1.5"
+          >
+            <Settings className="w-4 h-4 mr-3" /> System Settings
+          </button>
           <button
             onClick={signOut}
             className="flex items-center text-slate-400 hover:text-slate-200 transition"
@@ -543,8 +615,64 @@ function WriterHubContent({
           </div>
         )}
 
+        {/* Analytics View */}
+        {hubTab === "analytics" && (
+          <div className="mb-8 rounded-2xl border border-slate-700 bg-slate-900 p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white">Content Library Telemetry</h2>
+                <p className="text-xs text-slate-400 mt-1">Real-time status across Firestore collections and archive pipelines.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHubTab("all")}
+                className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition"
+              >
+                View All Items
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Ingested</span>
+                <div className="text-2xl font-black text-white mt-1">{libraryStats.total}</div>
+                <div className="text-[11px] text-slate-500 mt-1">Across all formats</div>
+              </div>
+              <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-red-400">Raw AI Ingested</span>
+                <div className="text-2xl font-black text-white mt-1">{libraryStats.inbox}</div>
+                <div className="text-[11px] text-slate-400 mt-1">Engine outputs / references</div>
+              </div>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-950/20 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-amber-400">Active Drafts</span>
+                <div className="text-2xl font-black text-white mt-1">{libraryStats.drafts}</div>
+                <div className="text-[11px] text-slate-400 mt-1">Pending editorial refinement</div>
+              </div>
+              <div className="rounded-xl border border-green-500/30 bg-green-950/20 p-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-green-400">Live Published</span>
+                <div className="text-2xl font-black text-white mt-1">{libraryStats.published}</div>
+                <div className="text-[11px] text-slate-400 mt-1">Public on movies.greybrain.in</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* List of imported Firebase items */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+          <div className="px-6 py-3.5 bg-slate-900/80 border-b border-slate-700 flex items-center justify-between text-xs text-slate-400">
+            <span>
+              Showing <strong className="text-white">{filteredItems.length}</strong> {hubTab === "all" ? "total" : hubTab} items
+            </span>
+            {hubTab !== "all" && (
+              <button
+                type="button"
+                onClick={() => setHubTab("all")}
+                className="text-red-400 hover:text-red-300 font-semibold"
+              >
+                Clear Tab Filter
+              </button>
+            )}
+          </div>
           <table className="w-full text-left">
             <thead className="bg-slate-900/50">
               <tr>
@@ -562,14 +690,14 @@ function WriterHubContent({
                     Fetching from Greybrainer Engine...
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
-                    No content found. Generate a report in the engine or import Medium posts first.
+                    No items found in {hubTab === "all" ? "the content library" : `the "${hubTab}" category`}.
                   </td>
                 </tr>
               ) : (
-                items.map((item) => {
+                filteredItems.map((item) => {
                   const referenceOnly = isReferenceOnly(item);
                   return (
                     <tr key={item.id} className={`${referenceOnly ? "bg-slate-900/30" : ""} hover:bg-slate-700/20 transition group`}>
@@ -622,6 +750,63 @@ function WriterHubContent({
             </tbody>
           </table>
         </div>
+
+        {/* System Settings Modal */}
+        {showSettingsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+            <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <Settings className="w-5 h-5 text-red-500" />
+                  <h3 className="text-lg font-bold text-white">System Settings &amp; Endpoints</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-xs">
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Active Authenticated User</span>
+                  <div className="font-semibold text-white text-sm">{user.email}</div>
+                  <div className="text-emerald-400 font-medium">Role: {role} (Full Permissions)</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Database Architecture</span>
+                  <div className="font-semibold text-white">Google Cloud Firestore: greybrainer (production)</div>
+                  <div className="text-slate-400">Collections: `published_research`, `subscribers`, `diagnostic_leads`</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Media Storage &amp; CDN</span>
+                  <div className="font-semibold text-white">Cloudflare R2 Bucket: greybrainer-media</div>
+                  <div className="text-slate-400">Endpoint: pub-6e2bb785055b41049b4938d2f7cb7bfd.r2.dev</div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+                  <span className="text-slate-500 font-semibold uppercase tracking-wider text-[10px]">Engine Deployment</span>
+                  <div className="font-semibold text-white">Cloudflare Pages: codex-cloudflare-staging.greybrainer-dev.pages.dev</div>
+                  <div className="text-slate-400">Public Domain: movies.greybrain.in</div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition"
+                >
+                  Close Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

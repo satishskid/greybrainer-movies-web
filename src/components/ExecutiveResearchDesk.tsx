@@ -487,7 +487,7 @@ export function ExecutiveResearchDesk() {
                   Close Briefing
                 </button>
                 <a
-                  href="/#studio-desk"
+                  href="/#studio-diagnostic"
                   onClick={() => setSelectedBriefing(null)}
                   className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
                 >

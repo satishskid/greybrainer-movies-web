@@ -13,7 +13,7 @@ interface Props {
 export function IntelligenceWireNudge({
   variant = "card",
   title = "The Greybrainer Intelligence Wire",
-  subtitle = "Weekly narrative failure-mode briefs, second-act retention telemetry, and auteur craft barometers dispatched to 4,200+ studio executives, acquisition heads, and filmmakers.",
+  subtitle = "Weekly narrative failure-mode briefs, second-act retention telemetry, and auteur craft barometers for studio executives, acquisition heads, and screenwriters.",
 }: Props) {
   const [email, setEmail] = useState("");
   const [persona, setPersona] = useState("Studio Executive / Buyer");
@@ -67,7 +67,7 @@ export function IntelligenceWireNudge({
         </div>
         <h4 className="text-xl font-bold text-white">You're on the Intelligence Wire</h4>
         <p className="text-sm text-slate-300 max-w-md mx-auto mt-2">
-          Confirmation sent to <span className="text-white font-semibold">{email}</span>. Expect our upcoming Friday release analysis and second-act diagnostic memo.
+          Confirmation sent to <span className="text-white font-semibold">{email}</span>. Expect our upcoming release analysis and second-act diagnostic memo.
         </p>
         <div className="mt-4 text-xs text-slate-400">
           Strictly zero spam. Private executive unsubscribe at any time.
@@ -87,7 +87,7 @@ export function IntelligenceWireNudge({
         <div className="lg:max-w-xl space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-red-400">
             <Users className="w-3.5 h-3.5" />
-            <span>4,200+ Studio &amp; Industry Readers</span>
+            <span>Confidential Cinematic Intelligence</span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             {title}

@@ -285,7 +285,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
               <p className="text-sm text-slate-400 mt-1">AI-Powered Cinematic Intelligence</p>
             </div>
             <Link
-              href="/"
+              href="/reviews"
               className="text-slate-400 hover:text-white transition text-sm"
             >
               ← More Reviews

@@ -111,7 +111,9 @@ export function StudioLeadMagnet() {
   ];
 
   return (
-    <section id="studio-diagnostic" className="relative rounded-3xl border border-red-900/40 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950/30 p-6 sm:p-12 shadow-2xl overflow-hidden scroll-mt-24">
+    <>
+      <div id="studio-desk" className="scroll-mt-24" />
+      <section id="studio-diagnostic" className="relative rounded-3xl border border-red-900/40 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950/30 p-6 sm:p-12 shadow-2xl overflow-hidden scroll-mt-24">
       {/* Decorative Glows */}
       <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-red-600/10 blur-3xl pointer-events-none" />
       <div className="absolute -left-24 -bottom-24 h-96 w-96 rounded-full bg-amber-600/10 blur-3xl pointer-events-none" />
@@ -399,7 +401,7 @@ export function StudioLeadMagnet() {
                     7-Layer Cinematic Diagnostic Rubric (Specimen Chimera)
                   </h5>
                   <span className="text-xs text-slate-400">
-                    Weighted against historical database of 340+ theatrical and OTT releases
+                    Weighted against historical database of 200+ theatrical and streaming releases
                   </span>
                 </div>
 
@@ -668,5 +670,6 @@ export function StudioLeadMagnet() {
         </div>
       </div>
     </section>
-  );
+  </>
+);
 }
