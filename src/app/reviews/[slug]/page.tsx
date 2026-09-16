@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import { ReviewArticle } from "./ReviewArticle";
 import { getAllArticles, getArticleBySlug } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
-import { absoluteUrl, SITE_BRAND, SITE_DESCRIPTION, SITE_NAME, toPlainText } from "@/lib/site";
+import { absoluteUrl, publicAuthorName, SITE_BRAND, SITE_DESCRIPTION, SITE_NAME, toPlainText } from "@/lib/site";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,6 +18,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = article.seoTitle || `${article.title} Review`;
   const description = article.seoDescription || article.verdict || article.excerpt || SITE_DESCRIPTION;
   const canonical = `/reviews/${article.slug}`;
+  const images = articleImageUrls(article);
+  const authorName = publicAuthorName(article.createdBy);
 
   return {
     title,
@@ -30,29 +32,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: absoluteUrl(canonical),
-      images: article.coverImageUrl ? [article.coverImageUrl] : [],
+      images,
       type: "article",
       publishedTime: article.publishedAt || undefined,
-      authors: [article.createdBy || SITE_BRAND],
+      authors: [authorName],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: article.coverImageUrl ? [article.coverImageUrl] : [],
+      images,
     },
   };
 }
 
 export default async function ReviewPage({ params }: Props) {
   const { slug } = await params;
-  const articles = await getAllArticles();
-  const article = articles.find((item) => item.slug === slug) ?? null;
+  const article = await getArticleBySlug(slug);
 
   if (!article) {
     notFound();
   }
 
+  const articles = await getAllArticles();
   const relatedArticles = getRelatedArticles(article, articles);
   const jsonLd = buildArticleJsonLd(article, relatedArticles);
 
@@ -84,6 +86,14 @@ function getRelatedArticles(article: SiteArticle, articles: SiteArticle[]) {
   return [...selected, ...fallback].slice(0, 3);
 }
 
+function articleImageUrls(article: SiteArticle) {
+  return [
+    article.coverImageUrl,
+    ...article.diagnosticImages.map((image) => image.url),
+    ...article.inlineImageUrls,
+  ].filter((url): url is string => Boolean(url));
+}
+
 function parseRating(score?: string) {
   if (!score) return null;
   const match = score.match(/\d+(?:\.\d+)?/);
@@ -99,18 +109,19 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
   const rating = parseRating(article.overallScore);
   const publishedDate = article.publishedAt || new Date().toISOString();
   const articleType = article.kind === "review" ? "Review" : "Article";
+  const authorName = publicAuthorName(article.createdBy);
   const mainEntity = {
     "@type": articleType,
     "@id": `${canonicalUrl}#article`,
     headline: article.searchHeadline || article.title,
     name: article.title,
     description: toPlainText(description || SITE_DESCRIPTION, 240),
-    image: [article.coverImageUrl, ...article.inlineImageUrls].filter(Boolean),
+    image: articleImageUrls(article),
     datePublished: publishedDate,
     dateModified: publishedDate,
     author: {
       "@type": "Organization",
-      name: article.createdBy || SITE_BRAND,
+      name: authorName,
     },
     publisher: {
       "@id": `${absoluteUrl("/")}#organization`,

@@ -4,7 +4,7 @@ import { useEffect, useState, use, type ReactNode } from "react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
-import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Globe, Loader2, Eye, Copy, Check, LogOut, ShieldCheck, Upload, Wand2, Plus, Trash2, Image as ImageIcon, Download, ExternalLink, Send, CheckCircle2, AlertTriangle, Settings, Smartphone } from "lucide-react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -45,9 +45,60 @@ interface ResearchDoc {
   faqs?: ArticleFaq[];
   relatedSlugs?: string[];
   inlineImageUrls?: string[];
+  gbCardImageUrl?: string;
+  gbCardUrls?: Record<string, string>;
 }
 
-const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://greybrainer-movies.netlify.app").replace(/\/$/, "");
+const PUBLIC_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in").replace(/\/$/, "");
+
+type GbCardType = "hero" | "rings" | "morpho" | "verdict";
+type SocialPreviewKey = "linkedin" | "instagram" | "facebook" | "twitter";
+
+interface SocialPreviewChannel {
+  channel: SocialPreviewKey;
+  label: string;
+  profileLabel: string;
+  profileUrl: string;
+  text: string;
+  assetUrl?: string;
+  assetLabel: string;
+  trackedUrl: string;
+  format: string;
+}
+
+const GB_CARD_DEFS: Array<{
+  type: GbCardType;
+  label: string;
+  description: string;
+}> = [
+  {
+    type: "hero",
+    label: "Hero Review Card",
+    description: "Main post image with title, Greybrainer brand, and overall score.",
+  },
+  {
+    type: "rings",
+    label: "Three-Layer Score Card",
+    description: "Uses the engine ring visual and the review layer scores.",
+  },
+  {
+    type: "morpho",
+    label: "Morphokinetics Card",
+    description: "Uses the engine Morphokinetics visual and public teaser.",
+  },
+  {
+    type: "verdict",
+    label: "Verdict Card",
+    description: "Uses the 50-word verdict, who-should-watch, and maker insight.",
+  },
+];
+
+const SOCIAL_PROFILE_URLS: Record<SocialPreviewKey, string> = {
+  linkedin: "https://www.linkedin.com/company/greybrainer/",
+  instagram: "https://www.instagram.com/greybrainlens/",
+  facebook: "https://www.facebook.com/share/1DmapQ7Hw3/",
+  twitter: "https://x.com/Greybrainlens",
+};
 
 function slugify(text: string): string {
   return text
@@ -70,6 +121,21 @@ function plainText(value: string, maxLength?: number) {
 
 function firstWords(value: string, maxWords: number) {
   return plainText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(" ");
+}
+
+async function readUploadPayload(response: Response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text) as { url?: string; error?: string };
+  } catch {
+    return {
+      error: response.ok
+        ? "Upload returned an unreadable response."
+        : text.slice(0, 300) || `Upload failed with status ${response.status}.`,
+    };
+  }
 }
 
 function linesToArray(value: string) {
@@ -104,6 +170,27 @@ function isReferenceOnlyType(type?: string) {
 
 function baseTitle(title: string) {
   return title.replace(/\s*-\s*Creator'?s Blueprint\s*$/i, "").trim();
+}
+
+function getDiagnosticImageUrls(article: Pick<ResearchDoc, "images">) {
+  return [article.images?.rings, article.images?.morpho]
+    .filter((url): url is string => typeof url === "string" && url.trim().length > 0);
+}
+
+function trackedUrl(baseUrl: string, source: string, campaign: string) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", "social");
+  url.searchParams.set("utm_campaign", campaign);
+  return url.toString();
+}
+
+function fallbackText(value: string, fallback: string, maxLength?: number) {
+  return plainText(value, maxLength) || fallback;
+}
+
+function bulletLines(lines: string[]) {
+  return lines.filter(Boolean).map((line) => `- ${line}`).join("\n");
 }
 
 export default function ArticleEditorPage({ params }: { params: Promise<{ id: string }> }) {
@@ -142,7 +229,7 @@ function ArticleEditor({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [uploadingAsset, setUploadingAsset] = useState(false);
-  const [activeTab, setActiveTab] = useState<"article" | "seo" | "social" | "assets">("article");
+  const [activeTab, setActiveTab] = useState<"article" | "seo" | "cards" | "social" | "assets">("article");
   const [previewMode, setPreviewMode] = useState(false);
   const [editedEditorial, setEditedEditorial] = useState("");
   const [editedContent, setEditedContent] = useState("");
@@ -162,15 +249,32 @@ function ArticleEditor({
   const [faqs, setFaqs] = useState<ArticleFaq[]>([{ question: "", answer: "" }]);
   const [inlineImageUrls, setInlineImageUrls] = useState("");
   const [relatedSlugs, setRelatedSlugs] = useState("");
+  const [gbCardImageUrl, setGbCardImageUrl] = useState("");
+  const [gbCardUrls, setGbCardUrls] = useState<Record<string, string>>({});
   const [copiedChannel, setCopiedChannel] = useState<string | null>(null);
-  const [saveMsg, setSaveMsg] = useState("");
+  const [saveMsg, setSaveMsg] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const notice = window.sessionStorage.getItem("hub_draft_notice") || "";
+    if (notice) window.sessionStorage.removeItem("hub_draft_notice");
+    return notice;
+  });
   const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [generatingGbCard, setGeneratingGbCard] = useState<GbCardType | "all" | null>(null);
   const [geminiKey, setGeminiKey] = useState("");
+  const [approvedSocialChannels, setApprovedSocialChannels] = useState<Record<string, boolean>>({});
+  const [publishingSocial, setPublishingSocial] = useState(false);
+  const [publisherUrl, setPublisherUrl] = useState("");
+  const [publisherToken, setPublisherToken] = useState("");
+  const [showPublisherSettings, setShowPublisherSettings] = useState(false);
 
   useEffect(() => {
     window.setTimeout(() => {
       const savedKey = localStorage.getItem("gemini_api_key");
       if (savedKey) setGeminiKey(savedKey);
+      const savedPublisherUrl = localStorage.getItem("social_publisher_url");
+      if (savedPublisherUrl) setPublisherUrl(savedPublisherUrl);
+      const savedPublisherToken = localStorage.getItem("social_publisher_token");
+      if (savedPublisherToken) setPublisherToken(savedPublisherToken);
     }, 0);
   }, []);
 
@@ -178,6 +282,18 @@ function ArticleEditor({
     const val = e.target.value;
     setGeminiKey(val);
     localStorage.setItem("gemini_api_key", val);
+  };
+
+  const handlePublisherUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPublisherUrl(val);
+    localStorage.setItem("social_publisher_url", val);
+  };
+
+  const handlePublisherTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setPublisherToken(val);
+    localStorage.setItem("social_publisher_token", val);
   };
 
   useEffect(() => {
@@ -204,8 +320,16 @@ function ArticleEditor({
           setMorphokineticsTeaser(data.morphokineticsTeaser || "");
           setProducerInsight(data.producerInsight || "");
           setFaqs(data.faqs?.length ? data.faqs : [{ question: "", answer: "" }]);
-          setInlineImageUrls((data.inlineImageUrls || []).join("\n"));
+          const storedInlineUrls = data.inlineImageUrls || [];
+          const diagnosticUrls = getDiagnosticImageUrls(data);
+          const mergedInlineUrls = [
+            ...storedInlineUrls,
+            ...diagnosticUrls.filter((url) => !storedInlineUrls.includes(url)),
+          ];
+          setInlineImageUrls(mergedInlineUrls.join("\n"));
           setRelatedSlugs((data.relatedSlugs || []).join("\n"));
+          setGbCardImageUrl(data.gbCardImageUrl || "");
+          setGbCardUrls(data.gbCardUrls || {});
         }
       } catch (err) {
         console.error("Failed to load article:", err);
@@ -220,7 +344,7 @@ function ArticleEditor({
     editorial: editedEditorial,
     content: editedContent,
     youtubeScript: editedYoutubeScript,
-    coverImageUrl,
+    coverImageUrl: coverImageUrl.trim(),
     seoTitle,
     seoDescription,
     searchHeadline,
@@ -235,6 +359,8 @@ function ArticleEditor({
     faqs: cleanFaqs(faqs),
     inlineImageUrls: linesToArray(inlineImageUrls),
     relatedSlugs: linesToArray(relatedSlugs).map(normalizeSlug).filter(Boolean),
+    gbCardImageUrl,
+    gbCardUrls,
     updatedAt: new Date(),
   });
 
@@ -260,6 +386,11 @@ function ArticleEditor({
     if (!article) return;
     if (isReferenceOnlyType(article.type)) {
       setSaveMsg("Reference only. Open the row marked PUBLISH THIS.");
+      return;
+    }
+    if (!coverImageUrl.trim()) {
+      setActiveTab("article");
+      setSaveMsg("Upload or paste a cover image before publishing so website thumbnails render.");
       return;
     }
     setPublishing(true);
@@ -310,7 +441,7 @@ function ArticleEditor({
     );
   };
 
-  const handleUploadImage = async (file: File, target: "cover" | "inline") => {
+  const handleUploadImage = async (file: File, target: "cover" | "inline" | "gb-card-context") => {
     if (!article) return;
     setUploadingAsset(true);
     setSaveMsg("");
@@ -326,7 +457,7 @@ function ArticleEditor({
         headers: { authorization: `Bearer ${token}` },
         body: formData,
       });
-      const payload = (await response.json()) as { url?: string; error?: string };
+      const payload = await readUploadPayload(response);
 
       if (!response.ok || !payload.url) {
         throw new Error(payload.error || "R2 upload failed.");
@@ -335,10 +466,27 @@ function ArticleEditor({
       const url = payload.url;
       if (target === "cover") {
         setCoverImageUrl(url);
+        await updateDoc(doc(db, "published_research", article.id), {
+          coverImageUrl: url,
+          updatedAt: new Date(),
+        });
+        setSaveMsg("Cover image uploaded and saved for website thumbnail.");
+      } else if (target === "gb-card-context") {
+        setGbCardImageUrl(url);
+        await updateDoc(doc(db, "published_research", article.id), {
+          gbCardImageUrl: url,
+          updatedAt: new Date(),
+        });
+        setSaveMsg("Movie card image uploaded.");
       } else {
-        setInlineImageUrls((current) => (current ? `${current}\n${url}` : url));
+        const nextInlineUrls = [...linesToArray(inlineImageUrls), url];
+        setInlineImageUrls(nextInlineUrls.join("\n"));
+        await updateDoc(doc(db, "published_research", article.id), {
+          inlineImageUrls: nextInlineUrls,
+          updatedAt: new Date(),
+        });
+        setSaveMsg("Inline image uploaded and saved.");
       }
-      setSaveMsg("Image uploaded to R2. Save draft to keep it.");
     } catch (error) {
       console.error("Image upload failed:", error);
       setSaveMsg(error instanceof Error ? error.message : "Image upload failed.");
@@ -386,6 +534,116 @@ function ArticleEditor({
     document.body.removeChild(link);
   };
 
+  const addAssetToInlineImages = (url: string) => {
+    setInlineImageUrls((current) => {
+      const existing = linesToArray(current);
+      if (existing.includes(url)) return current;
+      return [...existing, url].join("\n");
+    });
+    setSaveMsg("Added to article visuals. Save draft to keep it.");
+  };
+
+  const uploadGeneratedGbCard = async (cardType: GbCardType, blob: Blob) => {
+    if (!article) throw new Error("Article is not loaded.");
+
+    const formData = new FormData();
+    formData.append("draftId", article.id);
+    formData.append("kind", `gb-card-${cardType}`);
+    formData.append("file", new File([blob], `${slugify(article.title)}-${cardType}-gb-card.png`, { type: "image/png" }));
+
+    const token = await user.getIdToken();
+    const response = await fetch("/api/r2-upload", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const payload = await readUploadPayload(response);
+
+    if (!response.ok || !payload.url) {
+      throw new Error(payload.error || "Card upload failed.");
+    }
+
+    return payload.url;
+  };
+
+  const buildGbCardPayload = (cardType: GbCardType) => {
+    if (!article) return null;
+
+    const currentScoreRows = [
+      storyScore.trim() ? `Story/Script: ${storyScore.trim()}` : "",
+      conceptScore.trim() ? `Concept: ${conceptScore.trim()}` : "",
+      executionScore.trim() ? `Execution: ${executionScore.trim()}` : "",
+      overallScore.trim() ? `Overall: ${overallScore.trim()}` : "",
+    ].filter(Boolean);
+
+    return {
+      cardType,
+      title: searchHeadline || article.title,
+      subtitle: isBriefType(article.type) ? "Greybrainer Lens Brief" : "Three-Layer Movie Analysis",
+      verdict: verdict || firstWords(editedEditorial || editedContent || article.content || article.title, 50),
+      whoShouldWatch,
+      overallScore: overallScore || "GB",
+      scoreRows: currentScoreRows,
+      morphoLine: morphokineticsTeaser,
+      producerLine: producerInsight,
+      liveUrl: `${PUBLIC_SITE_URL}/reviews/${article.slug || slugify(searchHeadline || article.title)}`,
+      backgroundUrl: gbCardImageUrl || coverImageUrl,
+      ringsUrl: article.images?.rings || "",
+      morphoUrl: article.images?.morpho || "",
+    };
+  };
+
+  const handleGenerateGbCard = async (cardType: GbCardType, manageSpinner = true) => {
+    if (!article) return;
+    const payload = buildGbCardPayload(cardType);
+    if (!payload) return;
+
+    if (manageSpinner) setGeneratingGbCard(cardType);
+    setSaveMsg("");
+    try {
+      const renderResponse = await fetch("/api/gb-card-render", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!renderResponse.ok) {
+        const error = await renderResponse.json().catch(() => ({ error: "Card render failed." }));
+        throw new Error(error.error || "Card render failed.");
+      }
+
+      const blob = await renderResponse.blob();
+      const url = await uploadGeneratedGbCard(cardType, blob);
+      const nextUrls = { ...gbCardUrls, [cardType]: url };
+      setGbCardUrls(nextUrls);
+      await updateDoc(doc(db, "published_research", article.id), {
+        gbCardUrls: nextUrls,
+        updatedAt: new Date(),
+      });
+      setSaveMsg(`${GB_CARD_DEFS.find((card) => card.type === cardType)?.label || "GB card"} generated.`);
+    } catch (error) {
+      console.error("GB card generation failed:", error);
+      setSaveMsg(error instanceof Error ? error.message : "GB card generation failed.");
+    } finally {
+      if (manageSpinner) setGeneratingGbCard(null);
+    }
+  };
+
+  const handleGenerateAllGbCards = async () => {
+    setGeneratingGbCard("all");
+    try {
+      for (const card of GB_CARD_DEFS) {
+        await handleGenerateGbCard(card.type, false);
+      }
+      setSaveMsg("GB template card pack generated.");
+    } finally {
+      setGeneratingGbCard(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -405,24 +663,218 @@ function ArticleEditor({
 
   const liveSlug = article.slug || slugify(searchHeadline || article.title);
   const liveUrl = `${PUBLIC_SITE_URL}/reviews/${liveSlug}`;
+  const campaign = liveSlug || slugify(article.title);
+  const titleForSocial = searchHeadline || article.title;
+  const sourceText = editedEditorial || editedContent || article.content || article.title;
+  const isBrief = isBriefType(article.type);
   const referenceOnly = isReferenceOnlyType(article.type);
   const displayTitle = referenceOnly ? `Reference Notes: ${baseTitle(article.title)}` : article.title;
-  const socialDrafts = {
+  const socialVerdict = fallbackText(
+    verdict,
+    firstWords(sourceText, 50) || `A Greybrainer reading of ${article.title}.`,
+    320,
+  );
+  const compactVerdict = plainText(socialVerdict, 170);
+  const watchLine = fallbackText(
+    whoShouldWatch,
+    isBrief
+      ? "For readers tracking the movie and OTT conversation through a sharper Greybrainer lens."
+      : "For viewers who want a sharper read on story signal, craft, and audience energy.",
+    220,
+  );
+  const producerLine = fallbackText(
+    producerInsight,
+    isBrief
+      ? "The useful signal for makers is audience appetite, tonal movement, and where the conversation may move next."
+      : "The useful signal for makers is where the film's intent lands, where craft amplifies it, and where audience energy may shift.",
+    260,
+  );
+  const morphoLine = fallbackText(
+    morphokineticsTeaser,
+    "Morphokinetics reads attention, tension, release, and emotional momentum without exposing the internal scoring model.",
+    260,
+  );
+  const scoreRows = [
+    storyScore.trim() ? `Story/Script: ${storyScore.trim()}` : "",
+    conceptScore.trim() ? `Concept: ${conceptScore.trim()}` : "",
+    executionScore.trim() ? `Execution: ${executionScore.trim()}` : "",
+    overallScore.trim() ? `Overall: ${overallScore.trim()}` : "",
+  ].filter(Boolean);
+  const scoreBlock = scoreRows.length
+    ? bulletLines(scoreRows)
+    : "- Three-layer score: fill Story/Script, Concept, Execution, and Overall before posting.";
+  const hashtags = isBrief
+    ? "#Greybrainer #OTT #Cinema #FilmIndustry #AudienceInsights"
+    : "#Greybrainer #MovieReview #Cinema #FilmIndustry #AudienceInsights";
+  const channelLinks = {
+    linkedin: trackedUrl(liveUrl, "linkedin", campaign),
+    instagram: trackedUrl(liveUrl, "instagram", campaign),
+    facebook: trackedUrl(liveUrl, "facebook", campaign),
+    twitter: trackedUrl(liveUrl, "x", campaign),
+    medium: trackedUrl(liveUrl, "medium", campaign),
+  };
+  const gbCardLinkText = GB_CARD_DEFS
+    .map((card) => `${card.label}\n${gbCardUrls[card.type] || "Generate this card in the GB Cards tab."}`)
+    .join("\n\n");
+  const socialDefaults = {
     linkedin:
-      article.socials?.linkedin ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer reads the film through story signal, craft execution, audience pulse, and Morphokinetics.\n\nRead the full review: ${liveUrl}`,
+      `Most reviews ask whether ${article.title} is good.\nGreybrainer asks what kind of audience energy it creates.\n\n${socialVerdict}\n\nThree signals:\n${scoreBlock}\n\nProducer/director signal:\n${producerLine}\n\nWhat would you rather know before watching: the rating, or where attention starts shifting?\n\nRead the full review: ${channelLinks.linkedin}\n\n${hashtags}`,
+    linkedinCarousel:
+      `Slide 1\n${titleForSocial}\nNot just a rating. A reading of audience signal.\n\nSlide 2\n50-word verdict\n${socialVerdict}\n\nSlide 3\nWho should watch\n${watchLine}\n\nSlide 4\nThree-layer Greybrainer score\n${scoreBlock}\n\nSlide 5\nMorphokinetics teaser\n${morphoLine}\n\nSlide 6\nProducer/director insight\n${producerLine}\n\nSlide 7\nRead the full review\n${channelLinks.linkedin}`,
     twitter:
-      article.socials?.twitter ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 170)}\n\nFull Greybrainer review: ${liveUrl}`,
+      `${plainText(article.title, 60)}: most reviews stop at good or bad. Greybrainer reads the audience signal.\n\n${compactVerdict}\n\nFull review: ${channelLinks.twitter}\n\n#Greybrainer`,
     instagram:
-      article.socials?.instagram ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 220)}\n\nGreybrainer Lens: story, craft, audience pulse, Morphokinetics.\n\nLink in bio / full review: ${liveUrl}\n\n#Greybrainer #MovieReview #Cinema`,
+      `Are you watching ${article.title} for story, sensation, or aftertaste?\n\n${socialVerdict}\n\nCarousel slides:\n1. ${plainText(titleForSocial, 80)}\n2. The 50-word verdict\n3. Who should watch this\n4. Three-layer score\n5. Morphokinetics teaser\n6. Producer/director signal\n\nSave this for your watchlist. Link in bio/story: ${channelLinks.instagram}\n\n${hashtags}`,
+    instagramReel:
+      `0-3 sec\nMost reviews ask if ${article.title} is good. Greybrainer asks what it does to attention.\n\n3-12 sec\n${compactVerdict}\n\n12-22 sec\nThree-layer signal:\n${scoreBlock}\n\n22-30 sec\n${morphoLine}\n\nCaption\n${plainText(titleForSocial, 90)}\n${hashtags}\nLink in bio/story: ${channelLinks.instagram}`,
     facebook:
-      article.socials?.facebook ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 240)}\n\nRead the complete Greybrainer review: ${liveUrl}`,
+      `What did ${article.title} leave behind: emotion, adrenaline, thought, or silence?\n\n${socialVerdict}\n\nGreybrainer reads the film through story signal, craft execution, audience pulse, and Morphokinetics.\n\nQuestion for viewers: did the film hold your attention all the way through, or did it dip somewhere?\n\nRead the complete review: ${channelLinks.facebook}`,
     medium:
-      article.socials?.medium ||
-      `${searchHeadline || article.title}\n\n${verdict || plainText(editedEditorial || editedContent, 260)}\n\nOriginally published on Greybrainer Movies: ${liveUrl}`,
+      `${titleForSocial}\n\n${socialVerdict}\n\nThis is the canonical Greybrainer Movies version, with SEO metadata, FAQ, three-layer scoring, Morphokinetics teaser, and producer/director insight.\n\nCanonical review: ${channelLinks.medium}`,
+    hashtags,
+    altText:
+      `Cover image alt text\n${article.title} cover image for a Greybrainer movie analysis.\n\nThree-layer image alt text\n${article.title} Greybrainer three-layer score visualization covering story/script, concept, execution, and overall signal.\n\nMorphokinetics image alt text\n${article.title} Morphokinetics visualization showing attention, emotional momentum, tension, and release patterns.`,
+    trackedLinks:
+      `LinkedIn\n${channelLinks.linkedin}\n\nInstagram bio/story\n${channelLinks.instagram}\n\nFacebook\n${channelLinks.facebook}\n\nX\n${channelLinks.twitter}\n\nMedium canonical note\n${channelLinks.medium}`,
+    gbCardLinks: gbCardLinkText,
+  };
+  const socialOutputs = [
+    { channel: "linkedin", label: "LinkedIn Insight Post", text: article.socials?.linkedin || socialDefaults.linkedin },
+    { channel: "linkedin-carousel", label: "LinkedIn Carousel / PDF Slides", text: socialDefaults.linkedinCarousel },
+    { channel: "twitter", label: "X / Twitter Post", text: article.socials?.twitter || socialDefaults.twitter },
+    { channel: "instagram", label: "Instagram Carousel Caption", text: article.socials?.instagram || socialDefaults.instagram },
+    { channel: "instagram-reel", label: "Instagram Reel Script", text: socialDefaults.instagramReel },
+    { channel: "facebook", label: "Facebook Discussion Post", text: article.socials?.facebook || socialDefaults.facebook },
+    { channel: "medium", label: "Medium Syndication Note", text: article.socials?.medium || socialDefaults.medium },
+    { channel: "hashtags", label: "Hashtag Set", text: socialDefaults.hashtags },
+    { channel: "alt-text", label: "Image Alt Text", text: socialDefaults.altText },
+    { channel: "gb-card-links", label: "GB Template Card URLs", text: socialDefaults.gbCardLinks },
+    { channel: "tracked-links", label: "Tracked Links", text: socialDefaults.trackedLinks },
+  ];
+  const primaryFeedAsset = gbCardUrls.hero || coverImageUrl || gbCardImageUrl;
+  const verdictAsset = gbCardUrls.verdict || primaryFeedAsset;
+  const carouselAsset = gbCardUrls.rings || gbCardUrls.morpho || primaryFeedAsset;
+  const socialPreviewChannels: SocialPreviewChannel[] = [
+    {
+      channel: "linkedin",
+      label: "LinkedIn",
+      profileLabel: "Greybrainer company page",
+      profileUrl: SOCIAL_PROFILE_URLS.linkedin,
+      text: article.socials?.linkedin || socialDefaults.linkedin,
+      assetUrl: primaryFeedAsset,
+      assetLabel: primaryFeedAsset ? "Hero Review Card" : "No image selected",
+      trackedUrl: channelLinks.linkedin,
+      format: "Professional insight post + 4:5 feed image",
+    },
+    {
+      channel: "instagram",
+      label: "Instagram",
+      profileLabel: "@greybrainlens",
+      profileUrl: SOCIAL_PROFILE_URLS.instagram,
+      text: article.socials?.instagram || socialDefaults.instagram,
+      assetUrl: carouselAsset,
+      assetLabel: carouselAsset ? "Carousel cover / GB Card" : "No image selected",
+      trackedUrl: channelLinks.instagram,
+      format: "Carousel caption + 4:5 image",
+    },
+    {
+      channel: "facebook",
+      label: "Facebook",
+      profileLabel: "Greybrainer page",
+      profileUrl: SOCIAL_PROFILE_URLS.facebook,
+      text: article.socials?.facebook || socialDefaults.facebook,
+      assetUrl: verdictAsset,
+      assetLabel: verdictAsset ? "Verdict Card" : "No image selected",
+      trackedUrl: channelLinks.facebook,
+      format: "Discussion post + 4:5 feed image",
+    },
+    {
+      channel: "twitter",
+      label: "X",
+      profileLabel: "@Greybrainlens",
+      profileUrl: SOCIAL_PROFILE_URLS.twitter,
+      text: article.socials?.twitter || socialDefaults.twitter,
+      assetUrl: verdictAsset,
+      assetLabel: verdictAsset ? "Verdict/Hero Card" : "No image selected",
+      trackedUrl: channelLinks.twitter,
+      format: "Short post + image",
+    },
+  ];
+  const inlineUrlSet = new Set(linesToArray(inlineImageUrls));
+  const diagnosticAssets = [
+    { key: "rings", label: "Three-Layer Ring Image", url: article.images?.rings },
+    { key: "morpho", label: "Morphokinetics Graph", url: article.images?.morpho },
+  ].filter((asset): asset is { key: string; label: string; url: string } => Boolean(asset.url));
+  const gbCardImageSource = gbCardImageUrl || coverImageUrl;
+  const generatedCardCount = GB_CARD_DEFS.filter((card) => gbCardUrls[card.type]).length;
+  const approvedSocialCount = socialPreviewChannels.filter((preview) => approvedSocialChannels[preview.channel]).length;
+
+  const setAllSocialApprovals = (approved: boolean) => {
+    setApprovedSocialChannels(
+      Object.fromEntries(socialPreviewChannels.map((preview) => [preview.channel, approved])),
+    );
+  };
+
+  const toggleSocialApproval = (channel: SocialPreviewKey) => {
+    setApprovedSocialChannels((current) => ({ ...current, [channel]: !current[channel] }));
+  };
+
+  const handlePublishApprovedSocial = async () => {
+    if (!article) return;
+
+    if (article.status !== "published") {
+      setSaveMsg("Publish to Site first so social links do not 404.");
+      return;
+    }
+
+    const approvedChannels = socialPreviewChannels.filter((preview) => approvedSocialChannels[preview.channel]);
+    if (!approvedChannels.length) {
+      setSaveMsg("Approve at least one social channel first.");
+      return;
+    }
+
+    if (!publisherUrl.trim()) {
+      setShowPublisherSettings(true);
+      setSaveMsg("Connect a publisher endpoint first. Manual copy pack is ready below.");
+      return;
+    }
+
+    setPublishingSocial(true);
+    setSaveMsg("");
+    try {
+      const response = await fetch("/api/social-publish", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${await user.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          articleId: article.id,
+          title: titleForSocial,
+          liveUrl,
+          publisherUrl: publisherUrl.trim(),
+          publisherToken: publisherToken.trim(),
+          channels: approvedChannels.map((preview) => ({
+            channel: preview.channel,
+            label: preview.label,
+            text: preview.text,
+            assetUrl: preview.assetUrl || "",
+            trackedUrl: preview.trackedUrl,
+            format: preview.format,
+          })),
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; accepted?: boolean };
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error || "Social publisher rejected the request.");
+      }
+      setSaveMsg(`Publisher accepted ${approvedChannels.length} approved channel${approvedChannels.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      console.error("Social publishing failed:", error);
+      setSaveMsg(error instanceof Error ? error.message : "Social publishing failed.");
+    } finally {
+      setPublishingSocial(false);
+    }
   };
 
   return (
@@ -525,7 +977,7 @@ function ArticleEditor({
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-8 pt-6">
         <div className="flex space-x-1 bg-slate-800 rounded-lg p-1 w-fit mb-6">
-          {(["article", "seo", "social", "assets"] as const).map((tab) => (
+          {(["article", "seo", "cards", "social", "assets"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -539,9 +991,11 @@ function ArticleEditor({
                 ? "Article Editor"
                 : tab === "seo"
                   ? "Website SEO"
-                  : tab === "social"
-                    ? "Social Posts"
-                    : "Assets & Images"}
+                  : tab === "cards"
+                    ? "GB Cards"
+                    : tab === "social"
+                      ? "Social Posts"
+                      : "Assets & Images"}
             </button>
           ))}
         </div>
@@ -586,6 +1040,43 @@ function ArticleEditor({
             </div>
           )}
         </div>
+
+        {diagnosticAssets.length > 0 && (
+          <div className="mb-6 rounded-lg border border-teal-500/30 bg-slate-800/80 p-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="flex items-center text-lg font-bold text-white">
+                <ImageIcon className="mr-2 h-5 w-5 text-teal-300" />
+                Engine Diagnostic Visuals
+              </h2>
+              <span className="w-fit rounded-full border border-teal-500/40 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-teal-200">
+                {diagnosticAssets.length} Ready
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {diagnosticAssets.map((asset) => {
+                const isIncluded = inlineUrlSet.has(asset.url);
+                return (
+                  <div key={asset.key} className="rounded-md border border-slate-700 bg-slate-900 p-3">
+                    <div className="mb-3 h-44 overflow-hidden rounded-md bg-slate-950">
+                      <img src={asset.url} alt={`${article.title} ${asset.label}`} className="h-full w-full object-contain" />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-semibold text-slate-200">{asset.label}</span>
+                      <button
+                        onClick={() => addAssetToInlineImages(asset.url)}
+                        disabled={isIncluded}
+                        className="inline-flex items-center rounded-md bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:bg-emerald-700/50 disabled:text-emerald-100"
+                      >
+                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        {isIncluded ? "Included" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Content Area */}
         {activeTab === "article" && (
@@ -840,15 +1331,364 @@ function ArticleEditor({
           </div>
         )}
 
+        {activeTab === "cards" && (
+          <div className="mb-12 space-y-8">
+            <div className="rounded-lg border border-red-500/30 bg-slate-800 p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-2xl">
+                  <h2 className="text-2xl font-bold text-white">Greybrainer Template Cards</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Upload one contextual movie image. The card pack then uses the review headline, 50-word verdict,
+                    layer scores, three-ring visual, Morphokinetics graph, and public website URL.
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <label className="inline-flex cursor-pointer items-center rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600">
+                      {uploadingAsset ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                      Upload Movie Image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingAsset}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void handleUploadImage(file, "gb-card-context");
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                    <button
+                      onClick={handleGenerateAllGbCards}
+                      disabled={generatingGbCard !== null}
+                      className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:bg-red-900"
+                    >
+                      {generatingGbCard ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                      Make Draft in GB Template
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full max-w-sm rounded-lg border border-slate-700 bg-slate-900 p-3">
+                  <div className="aspect-[4/5] overflow-hidden rounded-md bg-slate-950">
+                    {gbCardImageSource ? (
+                      <img src={gbCardImageSource} alt="Movie card source" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
+                        Upload a movie screenshot, poster crop, or contextual still.
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Generated cards ready: {generatedCardCount}/{GB_CARD_DEFS.length}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {GB_CARD_DEFS.map((card) => {
+                const generatedUrl = gbCardUrls[card.type];
+                const isGenerating = generatingGbCard === card.type || generatingGbCard === "all";
+                return (
+                  <div key={card.type} className="rounded-lg border border-slate-700 bg-slate-800 p-5">
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{card.label}</h3>
+                        <p className="mt-1 text-sm text-slate-400">{card.description}</p>
+                      </div>
+                      <button
+                        onClick={() => void handleGenerateGbCard(card.type)}
+                        disabled={generatingGbCard !== null}
+                        className="inline-flex shrink-0 items-center rounded-md bg-slate-700 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
+                      >
+                        {isGenerating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" />}
+                        Generate
+                      </button>
+                    </div>
+
+                    <div className="overflow-hidden rounded-md border border-slate-700 bg-slate-950">
+                      {generatedUrl ? (
+                        <img src={generatedUrl} alt={`${card.label} preview`} className="aspect-[4/5] h-auto w-full object-cover" />
+                      ) : (
+                        <div
+                          className="relative aspect-[4/5] overflow-hidden bg-slate-950 p-7"
+                          style={{
+                            backgroundImage: gbCardImageSource
+                              ? `linear-gradient(180deg, rgba(2, 6, 23, 0.45), rgba(2, 6, 23, 0.95)), url("${gbCardImageSource}")`
+                              : "linear-gradient(135deg, #020617, #111827 55%, #450a0a)",
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        >
+                          <div className="relative z-10 flex h-full flex-col justify-between">
+                            <div>
+                              <p className="text-xl font-black tracking-wide text-red-500">GREYBRAINER</p>
+                              <p className="mt-1 text-xs font-bold uppercase tracking-[0.28em] text-slate-300">Movie Analysis</p>
+                            </div>
+                            <div>
+                              <p className="mb-3 w-fit rounded bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                                {card.type === "hero" ? "Three-Layer Review" : card.type === "rings" ? "Three-Layer Score" : card.type === "morpho" ? "Morphokinetics" : "Verdict"}
+                              </p>
+                              <p className="text-4xl font-black leading-tight text-white">{plainText(titleForSocial, 86)}</p>
+                              <p className="mt-4 max-w-sm text-sm leading-6 text-slate-200">
+                                {card.type === "rings"
+                                  ? scoreRows.join(" | ") || "Layer scores will appear here."
+                                  : card.type === "morpho"
+                                    ? morphoLine
+                                    : card.type === "verdict"
+                                      ? socialVerdict
+                                      : `Overall score: ${overallScore || "GB"}`}
+                              </p>
+                            </div>
+                            <p className="text-sm font-bold text-slate-200">movies.greybrain.in</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      {generatedUrl && (
+                        <>
+                          <a
+                            href={generatedUrl}
+                            download={`${slugify(article.title)}-${card.type}-gb-card.png`}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                          >
+                            <Download className="mr-1.5 h-3.5 w-3.5" />
+                            Download
+                          </a>
+                          <button
+                            onClick={() => copyToClipboard(generatedUrl, `gb-card-${card.type}`)}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                          >
+                            {copiedChannel === `gb-card-${card.type}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                            {copiedChannel === `gb-card-${card.type}` ? "Copied" : "Copy URL"}
+                          </button>
+                          <button
+                            onClick={() => addAssetToInlineImages(generatedUrl)}
+                            disabled={inlineUrlSet.has(generatedUrl)}
+                            className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-50"
+                          >
+                            <Plus className="mr-1.5 h-3.5 w-3.5" />
+                            {inlineUrlSet.has(generatedUrl) ? "In Article" : "Add to Article"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {activeTab === "social" && (
           <div className="mb-12 space-y-8">
-            {[
-              ["linkedin", "LinkedIn Post", socialDrafts.linkedin],
-              ["twitter", "X / Twitter Post", socialDrafts.twitter],
-              ["instagram", "Instagram Caption", socialDrafts.instagram],
-              ["facebook", "Facebook Post", socialDrafts.facebook],
-              ["medium", "Medium Syndication Note", socialDrafts.medium],
-            ].map(([channel, label, text]) => (
+            <div className="rounded-lg border border-red-500/30 bg-slate-800 p-6">
+              <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Channel Preview & Approval</h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                    Review how each post will appear, approve the channels, then publish the approved pack through the connected publisher.
+                    Website publishing should happen first so every social link opens the live article.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                      article.status === "published" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
+                    }`}>
+                      {article.status === "published" ? "Site link live" : "Publish site first"}
+                    </span>
+                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-300">
+                      {approvedSocialCount}/{socialPreviewChannels.length} approved
+                    </span>
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                      publisherUrl.trim() ? "bg-emerald-500/15 text-emerald-300" : "bg-slate-900 text-slate-400"
+                    }`}>
+                      {publisherUrl.trim() ? "Publisher connected" : "Manual-ready until connected"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+                  <button
+                    onClick={() => setAllSocialApprovals(true)}
+                    className="inline-flex items-center rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-600"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Approve All
+                  </button>
+                  <button
+                    onClick={() => setAllSocialApprovals(false)}
+                    className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => setShowPublisherSettings((current) => !current)}
+                    className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Publisher Setup
+                  </button>
+                  <button
+                    onClick={handlePublishApprovedSocial}
+                    disabled={publishingSocial || approvedSocialCount === 0}
+                    className="inline-flex items-center rounded-md bg-red-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-red-900"
+                  >
+                    {publishingSocial ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Publish Approved
+                  </button>
+                </div>
+              </div>
+
+              {showPublisherSettings && (
+                <div className="mt-6 grid grid-cols-1 gap-4 rounded-lg border border-slate-700 bg-slate-900 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Publisher endpoint
+                    </label>
+                    <input
+                      value={publisherUrl}
+                      onChange={handlePublisherUrlChange}
+                      placeholder="https://your-publisher-worker.example.com/publish"
+                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      API key / token
+                    </label>
+                    <input
+                      type="password"
+                      value={publisherToken}
+                      onChange={handlePublisherTokenChange}
+                      placeholder="Optional if endpoint does not need it"
+                      className="w-full rounded-md border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                  <p className="text-xs leading-5 text-slate-500 lg:col-span-2">
+                    This endpoint receives the approved channel JSON. Your tech person can connect it to Postiz, Publer, Minopa, a Cloudflare Worker, or a custom publisher.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              {socialPreviewChannels.map((preview) => {
+                const approved = Boolean(approvedSocialChannels[preview.channel]);
+                return (
+                  <div key={preview.channel} className={`rounded-lg border p-5 transition ${
+                    approved ? "border-emerald-500/50 bg-emerald-950/20" : "border-slate-700 bg-slate-800"
+                  }`}>
+                    <div className="mb-4 flex items-start justify-between gap-4">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{preview.label}</h3>
+                        <a
+                          href={preview.profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-flex items-center text-sm text-slate-400 transition hover:text-white"
+                        >
+                          {preview.profileLabel}
+                          <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                        </a>
+                      </div>
+                      <button
+                        onClick={() => toggleSocialApproval(preview.channel)}
+                        className={`inline-flex shrink-0 items-center rounded-md px-3 py-2 text-xs font-bold transition ${
+                          approved
+                            ? "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30"
+                            : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                        }`}
+                      >
+                        {approved ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Eye className="mr-1.5 h-3.5 w-3.5" />}
+                        {approved ? "Approved" : "Approve"}
+                      </button>
+                    </div>
+
+                    <div className="rounded-lg border border-slate-700 bg-slate-950 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 text-sm font-black text-white">
+                            GB
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">Greybrainer</p>
+                            <p className="text-xs text-slate-500">{preview.format}</p>
+                          </div>
+                        </div>
+                        <Smartphone className="h-4 w-4 text-slate-500" />
+                      </div>
+
+                      {preview.assetUrl ? (
+                        <div className="mb-4 overflow-hidden rounded-md border border-slate-800 bg-slate-900">
+                          <img src={preview.assetUrl} alt={`${preview.label} selected social asset`} className="aspect-[4/5] h-auto w-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="mb-4 flex aspect-[4/5] items-center justify-center rounded-md border border-dashed border-slate-700 bg-slate-900 px-6 text-center text-sm text-slate-500">
+                          Generate GB Cards or upload a cover image before publishing this channel.
+                        </div>
+                      )}
+
+                      <div className="max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-slate-900 p-4 text-sm leading-6 text-slate-300">
+                        {preview.text}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                        <span>{preview.text.length} characters</span>
+                        <span>•</span>
+                        <span>{preview.assetLabel}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => copyToClipboard(preview.text, `preview-${preview.channel}`)}
+                        className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                      >
+                        {copiedChannel === `preview-${preview.channel}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                        {copiedChannel === `preview-${preview.channel}` ? "Copied" : "Copy Text"}
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(preview.trackedUrl, `preview-link-${preview.channel}`)}
+                        className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                      >
+                        {copiedChannel === `preview-link-${preview.channel}` ? <Check className="mr-1.5 h-3.5 w-3.5 text-green-400" /> : <Copy className="mr-1.5 h-3.5 w-3.5" />}
+                        {copiedChannel === `preview-link-${preview.channel}` ? "Copied" : "Copy Link"}
+                      </button>
+                      {preview.assetUrl && (
+                        <a
+                          href={preview.assetUrl}
+                          download={`${slugify(article.title)}-${preview.channel}-social.png`}
+                          className="inline-flex items-center rounded-md border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white"
+                        >
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                          Download Image
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-lg border border-amber-500/30 bg-amber-950/20 p-4">
+              <div className="flex gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <p className="text-sm leading-6 text-amber-100/90">
+                  The Publish Approved button needs a publisher endpoint before it can post directly. Without that, the writer can still approve,
+                  copy text, download the selected image, and post manually with no editing skill required.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="mb-4 text-xl font-bold text-white">Manual Publishing Pack</h2>
+              <p className="mb-5 text-sm text-slate-400">
+                Backup copy blocks for the team. These remain useful even after automated publishing is connected.
+              </p>
+            </div>
+            {socialOutputs.map(({ channel, label, text }) => (
               <div key={channel} className="bg-slate-800 rounded-lg border border-slate-700 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-white">{label}</h3>
@@ -913,15 +1753,25 @@ function ArticleEditor({
           <div className="mb-12 space-y-8">
             {/* Concentric Rings Image */}
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-bold text-white">Three-Layer Concentric Rings</h3>
-                <button
-                  onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
-                  disabled={!article.images?.rings}
-                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
-                >
-                  Download PNG
-                </button>
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                  <button
+                    onClick={() => article.images?.rings && addAssetToInlineImages(article.images.rings)}
+                    disabled={!article.images?.rings || inlineUrlSet.has(article.images.rings)}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    {article.images?.rings && inlineUrlSet.has(article.images.rings) ? "Included in Article Visuals" : "Add to Article Visuals"}
+                  </button>
+                  <button
+                    onClick={() => article.images?.rings && handleDownloadAsset(article.images.rings, `${slugify(article.title)}_concentric_rings.png`)}
+                    disabled={!article.images?.rings}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    Download PNG
+                  </button>
+                </div>
               </div>
               <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
                 {article.images?.rings ? (
@@ -934,15 +1784,25 @@ function ArticleEditor({
 
             {/* Morphokinetics Image */}
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-bold text-white">Morphokinetics Flow</h3>
-                <button
-                  onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}
-                  disabled={!article.images?.morpho}
-                  className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
-                >
-                  Download PNG
-                </button>
+                <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                  <button
+                    onClick={() => article.images?.morpho && addAssetToInlineImages(article.images.morpho)}
+                    disabled={!article.images?.morpho || inlineUrlSet.has(article.images.morpho)}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    {article.images?.morpho && inlineUrlSet.has(article.images.morpho) ? "Included in Article Visuals" : "Add to Article Visuals"}
+                  </button>
+                  <button
+                    onClick={() => article.images?.morpho && handleDownloadAsset(article.images.morpho, `${slugify(article.title)}_morphokinetics.png`)}
+                    disabled={!article.images?.morpho}
+                    className="flex items-center text-sm text-slate-400 hover:text-white disabled:opacity-50 transition"
+                  >
+                    Download PNG
+                  </button>
+                </div>
               </div>
               <div className="bg-slate-900 rounded-md p-4 flex items-center justify-center min-h-[300px]">
                 {article.images?.morpho ? (

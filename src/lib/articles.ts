@@ -1,10 +1,13 @@
-import { collection, getDocs, limit as firestoreLimit, orderBy, query, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import lensArchiveData from "@/data/lensArchive.json";
-import type { ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import type { ArticleDiagnosticImage, ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import { publicAuthorName } from "@/lib/site";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
 const DEFAULT_ARCHIVE_LIMIT = 220;
+const FIREBASE_PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "greybrainer";
+const FIREBASE_API_KEY =
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDdWuwH2BAz9nSWVLXyC2uE8qoxl5QU3lY";
+const FIRESTORE_REST_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents`;
 
 interface LensArchiveEntry {
   id: string;
@@ -20,6 +23,25 @@ interface LensArchiveEntry {
   sourceUrl?: string;
   tags?: string[];
 }
+
+interface FirestoreRestDocument {
+  name: string;
+  fields?: Record<string, FirestoreRestValue>;
+}
+
+interface FirestoreRunQueryRow {
+  document?: FirestoreRestDocument;
+}
+
+type FirestoreRestValue =
+  | { nullValue: null }
+  | { stringValue: string }
+  | { integerValue: string }
+  | { doubleValue: number }
+  | { booleanValue: boolean }
+  | { timestampValue: string }
+  | { arrayValue: { values?: FirestoreRestValue[] } }
+  | { mapValue: { fields?: Record<string, FirestoreRestValue> } };
 
 const FALLBACK_IMAGES: Record<ArticleKind, string> = {
   review:
@@ -235,6 +257,33 @@ function optionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function firestoreValueToJson(value: FirestoreRestValue | undefined): unknown {
+  if (!value || "nullValue" in value) return null;
+  if ("stringValue" in value) return value.stringValue;
+  if ("integerValue" in value) return Number(value.integerValue);
+  if ("doubleValue" in value) return value.doubleValue;
+  if ("booleanValue" in value) return value.booleanValue;
+  if ("timestampValue" in value) return value.timestampValue;
+  if ("arrayValue" in value) {
+    return (value.arrayValue.values || []).map(firestoreValueToJson);
+  }
+  if ("mapValue" in value) {
+    return firestoreFieldsToJson(value.mapValue.fields || {});
+  }
+  return null;
+}
+
+function firestoreFieldsToJson(fields: Record<string, FirestoreRestValue>) {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, firestoreValueToJson(value)]),
+  );
+}
+
+function normalizeFirestoreRestDocument(document: FirestoreRestDocument) {
+  const id = document.name.split("/").at(-1) || document.name;
+  return normalizeFirebaseDoc(id, firestoreFieldsToJson(document.fields || {}));
+}
+
 function stringArray(value: unknown) {
   if (!Array.isArray(value)) return [];
   return value
@@ -255,6 +304,25 @@ function normalizeFaqs(value: unknown): ArticleFaq[] {
     .filter((item): item is ArticleFaq => Boolean(item));
 }
 
+function normalizeDiagnosticImages(value: unknown): ArticleDiagnosticImage[] {
+  if (!value || typeof value !== "object") return [];
+
+  const images = value as { rings?: unknown; morpho?: unknown };
+  const normalized: ArticleDiagnosticImage[] = [];
+  const rings = optionalString(images.rings);
+  const morpho = optionalString(images.morpho);
+
+  if (rings) {
+    normalized.push({ label: "Three-Layer Concentric Rings", url: rings });
+  }
+
+  if (morpho) {
+    normalized.push({ label: "Morphokinetics Flow", url: morpho });
+  }
+
+  return normalized;
+}
+
 function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteArticle {
   const title = String(data.title ?? "Untitled");
   const tags = Array.isArray(data.tags) ? data.tags.map(String) : [];
@@ -263,6 +331,8 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
   const publishedDate = timestampToDate(data.publishedAt) ?? timestampToDate(data.createdAt) ?? new Date(0);
   const content = String(data.content ?? "");
   const editorial = typeof data.editorial === "string" ? data.editorial : null;
+  const diagnosticImages = normalizeDiagnosticImages(data.images);
+  const diagnosticUrls = new Set(diagnosticImages.map((image) => image.url));
 
   return {
     id,
@@ -274,7 +344,7 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     editorial,
     excerpt: makeExcerpt(editorial || content),
     coverImageUrl: typeof data.coverImageUrl === "string" && data.coverImageUrl ? data.coverImageUrl : FALLBACK_IMAGES[kind],
-    createdBy: String(data.createdBy ?? "Greybrainer AI"),
+    createdBy: publicAuthorName(String(data.createdBy ?? "Greybrainer AI")),
     publishedAt: publishedDate.valueOf() > 0 ? publishedDate.toISOString() : null,
     publishedAtMs: publishedDate.valueOf(),
     source: "firebase",
@@ -295,7 +365,8 @@ function normalizeFirebaseDoc(id: string, data: Record<string, unknown>): SiteAr
     producerInsight: optionalString(data.producerInsight),
     faqs: normalizeFaqs(data.faqs),
     relatedSlugs: stringArray(data.relatedSlugs),
-    inlineImageUrls: stringArray(data.inlineImageUrls),
+    inlineImageUrls: stringArray(data.inlineImageUrls).filter((url) => !diagnosticUrls.has(url)),
+    diagnosticImages,
   };
 }
 
@@ -334,6 +405,7 @@ function normalizeFeedItem(itemXml: string, index: number): SiteArticle | null {
     faqs: [],
     relatedSlugs: [],
     inlineImageUrls: [],
+    diagnosticImages: [],
   };
 }
 
@@ -363,22 +435,92 @@ function normalizeStaticArchiveEntry(entry: LensArchiveEntry): SiteArticle {
     faqs: [],
     relatedSlugs: [],
     inlineImageUrls: [],
+    diagnosticImages: [],
   };
 }
 
 async function getPublishedFirebaseArticles(maxCount: number) {
   try {
-    const publishedQuery = query(
-      collection(db, "published_research"),
-      where("status", "==", "published"),
-      orderBy("publishedAt", "desc"),
-      firestoreLimit(maxCount),
-    );
-    const snapshot = await getDocs(publishedQuery);
-    return snapshot.docs.map((doc) => normalizeFirebaseDoc(doc.id, doc.data()));
+    const response = await fetch(`${FIRESTORE_REST_BASE}:runQuery?key=${FIREBASE_API_KEY}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "published_research" }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: "status" },
+              op: "EQUAL",
+              value: { stringValue: "published" },
+            },
+          },
+        },
+      }),
+      next: { revalidate: 60 },
+    } as RequestInit & { next: { revalidate: number } });
+
+    if (!response.ok) {
+      throw new Error(`Firestore REST returned ${response.status}`);
+    }
+
+    const rows = (await response.json()) as FirestoreRunQueryRow[];
+    return rows
+      .map((row) => row.document)
+      .filter((document): document is FirestoreRestDocument => Boolean(document))
+      .map(normalizeFirestoreRestDocument)
+      .sort((a, b) => b.publishedAtMs - a.publishedAtMs)
+      .slice(0, maxCount);
   } catch (error) {
     console.error("Failed to load Firebase published articles:", error);
     return [];
+  }
+}
+
+async function getPublishedFirebaseArticleBySlug(slug: string) {
+  try {
+    const response = await fetch(`${FIRESTORE_REST_BASE}:runQuery?key=${FIREBASE_API_KEY}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "published_research" }],
+          where: {
+            compositeFilter: {
+              op: "AND",
+              filters: [
+                {
+                  fieldFilter: {
+                    field: { fieldPath: "status" },
+                    op: "EQUAL",
+                    value: { stringValue: "published" },
+                  },
+                },
+                {
+                  fieldFilter: {
+                    field: { fieldPath: "slug" },
+                    op: "EQUAL",
+                    value: { stringValue: slug },
+                  },
+                },
+              ],
+            },
+          },
+          limit: 1,
+        },
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`Firestore REST returned ${response.status}`);
+    }
+
+    const rows = (await response.json()) as FirestoreRunQueryRow[];
+    const match = rows.find((row) => row.document)?.document;
+    return match ? normalizeFirestoreRestDocument(match) : null;
+  } catch (error) {
+    console.error(`Failed to load Firebase article for slug "${slug}":`, error);
+    return null;
   }
 }
 
@@ -427,6 +569,9 @@ export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<
 }
 
 export async function getArticleBySlug(slug: string): Promise<SiteArticle | null> {
+  const firebaseArticle = await getPublishedFirebaseArticleBySlug(slug);
+  if (firebaseArticle) return firebaseArticle;
+
   const articles = await getAllArticles(DEFAULT_ARCHIVE_LIMIT);
   return articles.find((article) => article.slug === slug) ?? null;
 }

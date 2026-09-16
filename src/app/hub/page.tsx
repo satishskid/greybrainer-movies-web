@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck, Plus } from "lucide-react";
-import { addDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
+import { Layers, Settings, FileText, BarChart, PenTool, Loader2, LogOut, ShieldCheck, Plus, Upload, X, RefreshCw } from "lucide-react";
+import { addDoc, collection, query, orderBy, getDocs, updateDoc, doc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
 import { format } from "date-fns";
 import { HubAuthGate } from "@/components/HubAuthGate";
 import type { HubRole } from "@/lib/hubRoles";
+import { SITE_AUTHOR } from "@/lib/site";
 
 interface ResearchItem {
   id: string;
@@ -47,6 +48,21 @@ function firstWords(value: string, maxWords: number) {
   return plainText(value).split(/\s+/).filter(Boolean).slice(0, maxWords).join(" ");
 }
 
+async function readUploadPayload(response: Response) {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text) as { url?: string; error?: string };
+  } catch {
+    return {
+      error: response.ok
+        ? "Upload returned an unreadable response."
+        : text.slice(0, 300) || `Upload failed with status ${response.status}.`,
+    };
+  }
+}
+
 function isReferenceOnly(item: ResearchItem) {
   return item.type === "creator_insights";
 }
@@ -79,41 +95,51 @@ function WriterHubContent({
   const [newDraftType, setNewDraftType] = useState<ManualDraftType>("daily_brief");
   const [newDraftTitle, setNewDraftTitle] = useState("");
   const [newDraftContent, setNewDraftContent] = useState("");
+  const [newDraftCoverFile, setNewDraftCoverFile] = useState<File | null>(null);
+  const [newDraftInlineFiles, setNewDraftInlineFiles] = useState<File[]>([]);
   const [creatingDraft, setCreatingDraft] = useState(false);
   const [createError, setCreateError] = useState("");
+  const [fetchError, setFetchError] = useState("");
+
+  async function fetchResearch() {
+    setLoading(true);
+    setFetchError("");
+    try {
+      const q = query(collection(db, "published_research"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+      const firestoreItems = snapshot.docs.map(doc => ({
+        id: doc.id,
+        source: "firebase" as const,
+        ...doc.data()
+      })) as ResearchItem[];
+
+      const archiveResponse = await fetch("/api/articles?limit=220");
+      const archiveJson = archiveResponse.ok ? await archiveResponse.json() : { articles: [] };
+      const archiveItems = (archiveJson.articles || []).map((article: ResearchItem) => ({
+        ...article,
+        source: article.source || "lens-archive",
+      })) as ResearchItem[];
+
+      const byId = new Map<string, ResearchItem>();
+      for (const item of [...firestoreItems, ...archiveItems]) {
+        if (!item.id || byId.has(item.id)) continue;
+        byId.set(item.id, item);
+      }
+
+      setItems([...byId.values()]);
+    } catch (err) {
+      console.error("Failed to fetch research from Firebase:", err);
+      setFetchError("Could not refresh the content library. Check sign-in and Firestore access, then try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchResearch() {
-      try {
-        const q = query(collection(db, "published_research"), orderBy("createdAt", "desc"));
-        const snapshot = await getDocs(q);
-        const firestoreItems = snapshot.docs.map(doc => ({
-          id: doc.id,
-          source: "firebase" as const,
-          ...doc.data()
-        })) as ResearchItem[];
-
-        const archiveResponse = await fetch("/api/articles?limit=220");
-        const archiveJson = archiveResponse.ok ? await archiveResponse.json() : { articles: [] };
-        const archiveItems = (archiveJson.articles || []).map((article: ResearchItem) => ({
-          ...article,
-          source: article.source || "lens-archive",
-        })) as ResearchItem[];
-
-        const byId = new Map<string, ResearchItem>();
-        for (const item of [...firestoreItems, ...archiveItems]) {
-          if (!item.id || byId.has(item.id)) continue;
-          byId.set(item.id, item);
-        }
-
-        setItems([...byId.values()]);
-      } catch (err) {
-        console.error("Failed to fetch research from Firebase:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchResearch();
+    const timer = window.setTimeout(() => {
+      void fetchResearch();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   function formatItemDate(item: ResearchItem) {
@@ -166,6 +192,36 @@ function WriterHubContent({
     return "Review before publishing.";
   }
 
+  function resetNewDraftForm() {
+    setShowNewDraft(false);
+    setNewDraftTitle("");
+    setNewDraftContent("");
+    setNewDraftCoverFile(null);
+    setNewDraftInlineFiles([]);
+    setCreateError("");
+  }
+
+  async function uploadDraftImage(draftId: string, file: File, kind: "cover" | "inline") {
+    const formData = new FormData();
+    formData.append("draftId", draftId);
+    formData.append("kind", kind);
+    formData.append("file", file);
+
+    const token = await user.getIdToken();
+    const response = await fetch("/api/r2-upload", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const payload = await readUploadPayload(response);
+
+    if (!response.ok || !payload.url) {
+      throw new Error(payload.error || "Image upload failed.");
+    }
+
+    return payload.url;
+  }
+
   async function handleCreateManualDraft(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = newDraftTitle.trim();
@@ -187,7 +243,7 @@ function WriterHubContent({
         editorial: content,
         createdAt: new Date(),
         status: "draft",
-        createdBy: user.email || "Greybrainer editor",
+        createdBy: SITE_AUTHOR,
         source: "writer_hub",
         tags: isBrief ? ["daily brief", "greybrainer lens"] : ["greybrainer"],
         searchHeadline: title,
@@ -208,10 +264,46 @@ function WriterHubContent({
         relatedSlugs: [],
       });
 
+      let uploadWarning = "";
+
+      try {
+        let coverImageUrl = "";
+        const inlineImageUrls: string[] = [];
+
+        if (newDraftCoverFile) {
+          coverImageUrl = await uploadDraftImage(docRef.id, newDraftCoverFile, "cover");
+        }
+
+        for (const file of newDraftInlineFiles) {
+          inlineImageUrls.push(await uploadDraftImage(docRef.id, file, "inline"));
+        }
+
+        if (coverImageUrl || inlineImageUrls.length > 0) {
+          await updateDoc(doc(db, "published_research", docRef.id), {
+            ...(coverImageUrl ? { coverImageUrl } : {}),
+            inlineImageUrls,
+            updatedAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error("Manual draft image upload failed:", error);
+        uploadWarning = error instanceof Error ? error.message : "Image upload failed.";
+      }
+
+      setNewDraftTitle("");
+      setNewDraftContent("");
+      setNewDraftCoverFile(null);
+      setNewDraftInlineFiles([]);
+      if (uploadWarning) {
+        window.sessionStorage.setItem(
+          "hub_draft_notice",
+          `Draft created, but image upload needs retry: ${uploadWarning} Use Upload Cover or Upload Inline Image in the editor.`,
+        );
+      }
       router.push(`/hub/${docRef.id}`);
     } catch (error) {
       console.error("Manual draft creation failed:", error);
-      setCreateError("Draft creation failed. Check console.");
+      setCreateError(error instanceof Error ? error.message : "Draft creation failed. Check console.");
     } finally {
       setCreatingDraft(false);
     }
@@ -265,13 +357,23 @@ function WriterHubContent({
             <p className="text-slate-400">Engine drafts, writer-uploaded articles, and Medium archive posts currently powering Greybrainer Movies.</p>
           </div>
           <div className="flex flex-col items-start gap-3 md:items-end">
-            <button
-              onClick={() => setShowNewDraft(true)}
-              className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Draft
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void fetchResearch()}
+                disabled={loading}
+                className="inline-flex items-center rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:text-white disabled:opacity-60"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowNewDraft(true)}
+                className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New Draft
+              </button>
+            </div>
             <div className="hidden md:block text-right">
               <p className="text-xs uppercase tracking-wider text-slate-500">Signed in</p>
               <p className="text-sm font-semibold text-white">{user.email}</p>
@@ -283,7 +385,7 @@ function WriterHubContent({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
             <form
               onSubmit={handleCreateManualDraft}
-              className="w-full max-w-3xl rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+              className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-700 bg-slate-900 p-6 shadow-2xl"
             >
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
@@ -292,7 +394,7 @@ function WriterHubContent({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowNewDraft(false)}
+                  onClick={resetNewDraftForm}
                   className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-500 hover:text-white"
                 >
                   Close
@@ -307,9 +409,9 @@ function WriterHubContent({
                     onChange={(event) => setNewDraftType(event.target.value as ManualDraftType)}
                     className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                   >
-                    <option value="daily_brief">Daily Briefing</option>
+                    <option value="daily_brief">Daily Newsletter</option>
                     <option value="insight">Insight</option>
-                    <option value="research_export">Deep Review</option>
+                    <option value="research_export">Review Article</option>
                   </select>
                 </label>
                 <label className="block">
@@ -334,12 +436,90 @@ function WriterHubContent({
                 />
               </label>
 
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-md border border-slate-700 bg-slate-950 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cover Image</span>
+                      <p className="mt-1 text-xs text-slate-500">Used as the website hero and social preview image.</p>
+                    </div>
+                    {newDraftCoverFile && (
+                      <button
+                        type="button"
+                        onClick={() => setNewDraftCoverFile(null)}
+                        className="rounded-md p-1 text-slate-500 hover:bg-slate-800 hover:text-white"
+                        aria-label="Remove cover image"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose Cover
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={creatingDraft}
+                      onChange={(event) => {
+                        setNewDraftCoverFile(event.target.files?.[0] || null);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  <p className="mt-3 truncate text-sm text-slate-300">
+                    {newDraftCoverFile ? newDraftCoverFile.name : "No cover selected."}
+                  </p>
+                </div>
+
+                <div className="rounded-md border border-slate-700 bg-slate-950 p-4">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-slate-400">Inline Images</span>
+                  <p className="mt-1 text-xs text-slate-500">Optional images inserted later from the editor visuals lane.</p>
+                  <label className="mt-3 inline-flex cursor-pointer items-center rounded-md bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose Images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={creatingDraft}
+                      onChange={(event) => {
+                        const files = Array.from(event.target.files || []);
+                        setNewDraftInlineFiles((current) => [...current, ...files]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  {newDraftInlineFiles.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                      {newDraftInlineFiles.map((file, index) => (
+                        <div key={`${file.name}-${index}`} className="flex items-center justify-between gap-3 rounded-md bg-slate-900 px-3 py-2 text-sm text-slate-300">
+                          <span className="truncate">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => setNewDraftInlineFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                            className="text-slate-500 hover:text-white"
+                            aria-label={`Remove ${file.name}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-300">No inline images selected.</p>
+                  )}
+                </div>
+              </div>
+
               {createError && <p className="mt-3 text-sm text-red-300">{createError}</p>}
 
               <div className="mt-5 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowNewDraft(false)}
+                  onClick={resetNewDraftForm}
                   className="rounded-md border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 hover:border-slate-500 hover:text-white"
                 >
                   Cancel
@@ -350,10 +530,16 @@ function WriterHubContent({
                   className="inline-flex items-center rounded-md bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:bg-red-900"
                 >
                   {creatingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Draft
+                  {creatingDraft ? "Creating..." : "Create Draft"}
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {fetchError && (
+          <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {fetchError}
           </div>
         )}
 
@@ -386,50 +572,50 @@ function WriterHubContent({
                 items.map((item) => {
                   const referenceOnly = isReferenceOnly(item);
                   return (
-                  <tr key={item.id} className={`${referenceOnly ? "bg-slate-900/30" : ""} hover:bg-slate-700/20 transition group`}>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                            referenceOnly
-                              ? "bg-slate-700 text-slate-300"
-                              : "bg-green-500/15 text-green-300"
-                          }`}>
-                            {referenceOnly ? "Reference only" : "Publish this"}
-                          </span>
-                          <span className={`font-medium ${referenceOnly ? "text-slate-300" : "text-white"}`}>
-                            {itemTitle(item)}
-                          </span>
+                    <tr key={item.id} className={`${referenceOnly ? "bg-slate-900/30" : ""} hover:bg-slate-700/20 transition group`}>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`rounded px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                              referenceOnly
+                                ? "bg-slate-700 text-slate-300"
+                                : "bg-green-500/15 text-green-300"
+                            }`}>
+                              {referenceOnly ? "Reference only" : "Publish this"}
+                            </span>
+                            <span className={`font-medium ${referenceOnly ? "text-slate-300" : "text-white"}`}>
+                              {itemTitle(item)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500">{itemInstruction(item)}</span>
                         </div>
-                        <span className="text-xs text-slate-500">{itemInstruction(item)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400">
-                      <span className={`${referenceOnly ? "bg-slate-900 text-slate-400" : "bg-slate-700 text-slate-200"} text-xs px-2 py-1 rounded`}>
-                        {itemLabel(item)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-400 text-sm">
-                      {formatItemDate(item)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {item.source === "lens-archive" ? (
-                        <Link
-                          href={item.slug ? `/reviews/${item.slug}` : item.sourceUrl || "/reviews"}
-                          className="text-slate-300 hover:text-white font-medium text-sm transition"
-                        >
-                          View live →
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/hub/${item.id}`}
-                          className={`${referenceOnly ? "text-slate-400 hover:text-slate-200" : "text-red-400 hover:text-red-300"} font-medium text-sm transition`}
-                        >
-                          {itemActionLabel(item)} →
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400">
+                        <span className={`${referenceOnly ? "bg-slate-900 text-slate-400" : "bg-slate-700 text-slate-200"} text-xs px-2 py-1 rounded`}>
+                          {itemLabel(item)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 text-sm">
+                        {formatItemDate(item)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {item.source === "lens-archive" ? (
+                          <Link
+                            href={item.slug ? `/reviews/${item.slug}` : item.sourceUrl || "/reviews"}
+                            className="text-slate-300 hover:text-white font-medium text-sm transition"
+                          >
+                            View live →
+                          </Link>
+                        ) : (
+                          <Link
+                            href={`/hub/${item.id}`}
+                            className={`${referenceOnly ? "text-slate-400 hover:text-slate-200" : "text-red-400 hover:text-red-300"} font-medium text-sm transition`}
+                          >
+                            {itemActionLabel(item)} →
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
                   );
                 })
               )}
