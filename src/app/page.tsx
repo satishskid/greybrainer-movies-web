@@ -17,6 +17,7 @@ import { getModernArticles } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
 import { MorphokineticsDemo } from "@/components/MorphokineticsDemo";
 import { StudioLeadMagnet } from "@/components/StudioLeadMagnet";
+import { IntelligenceWireNudge } from "@/components/IntelligenceWireNudge";
 
 export const revalidate = 900;
 
@@ -81,7 +82,7 @@ export default async function Home() {
               className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-red-600 via-red-500 to-amber-600 hover:from-red-500 hover:to-amber-500 px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-xl shadow-red-950/50 transition-all hover:scale-105"
             >
               <ShieldCheck className="w-5 h-5 text-white" />
-              <span>Request Studio Diagnostic (NDA)</span>
+              <span>Explore Studio Advisory &amp; Specimen</span>
             </a>
 
             <a
@@ -95,7 +96,12 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-16 space-y-24">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-12 space-y-24">
+        {/* TOFU NUDGE: THE INTELLIGENCE WIRE FOLLOW BAR */}
+        <section className="-mt-6">
+          <IntelligenceWireNudge />
+        </section>
+
         {/* SECTION 1: ACTIVE INTELLIGENCE DOSSIERS & ESSAYS */}
         <section id="dossiers" className="scroll-mt-24">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
@@ -229,7 +235,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* SECTION 4: STUDIO LEAD MAGNET DESK */}
+        {/* SECTION 4: STUDIO ADVISORY DESK & CAPABILITY SHOWCASE (MOFU & BOFU) */}
         <StudioLeadMagnet />
 
         {/* SECTION 5: HISTORICAL LENS ARCHIVE CALLOUT */}
@@ -288,10 +294,10 @@ export default async function Home() {
                 Studio Advisory
               </h4>
               <nav className="space-y-2.5 text-xs text-slate-400">
-                <a href="#studio-diagnostic" className="block hover:text-white transition">Request Script Diagnostic (NDA)</a>
+                <a href="#studio-diagnostic" className="block hover:text-white transition">Pre-Greenlight Script Stress-Test</a>
                 <a href="#studio-diagnostic" className="block hover:text-white transition">Rough Cut Screening Audit</a>
-                <a href="#studio-diagnostic" className="block hover:text-white transition">OTT Acquisition Assessment</a>
-                <a href="#studio-diagnostic" className="block hover:text-white transition">Commission Custom Analysis</a>
+                <a href="#studio-diagnostic" className="block hover:text-white transition">OTT Acquisition Due Diligence</a>
+                <a href="mailto:dr.satish@greybrain.ai?subject=Studio%20Inquiry" className="block hover:text-white transition">Bilateral NDA Direct Desk</a>
               </nav>
             </div>
 
@@ -334,5 +340,5 @@ function getDateString(article: SiteArticle) {
 function getExcerpt(article: SiteArticle, maxLen = 160) {
   const text = article.excerpt || article.editorial || article.content || "";
   if (text.length <= maxLen) return text;
-  return ;
+  return text.slice(0, maxLen).trim() + "...";
 }
