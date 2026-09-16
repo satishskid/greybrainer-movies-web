@@ -548,6 +548,52 @@ function getStaticLensArchiveArticles() {
   return (lensArchiveData.articles as LensArchiveEntry[]).map(normalizeStaticArchiveEntry);
 }
 
+const GENERIC_SEATS_IMAGE = "photo-1489599849927-2ee91cede3ba";
+
+function isDummyTestArticle(article: SiteArticle): boolean {
+  const title = (article.title || "").toLowerCase();
+  return (
+    title.includes("direct browser client test") ||
+    title === "direct test" ||
+    title.includes("dummy test")
+  );
+}
+
+function enhanceContextualCover(article: SiteArticle): SiteArticle {
+  const titleLower = (article.title || "").toLowerCase();
+  let cover = article.coverImageUrl;
+
+  if (!cover || cover.includes(GENERIC_SEATS_IMAGE)) {
+    if (titleLower.includes("war 2")) {
+      cover = "https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("toxic")) {
+      cover = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("kantara")) {
+      cover = "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("dune")) {
+      cover = "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("kgf")) {
+      cover = "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("rrr")) {
+      cover = "https://images.unsplash.com/photo-1533488765986-dfa2a9939acd?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("stree")) {
+      cover = "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("pushpa")) {
+      cover = "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1400&q=80";
+    } else if (titleLower.includes("wire") || titleLower.includes("brief")) {
+      cover = "https://images.unsplash.com/photo-1524985069026-dd778a71c7b4?auto=format&fit=crop&w=1400&q=80";
+    } else {
+      // Default to high-contrast cinematic atmosphere rather than empty red chairs
+      cover = "https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&w=1400&q=80";
+    }
+  }
+
+  return {
+    ...article,
+    coverImageUrl: cover,
+  };
+}
+
 export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<SiteArticle[]> {
   const staticLensArticles = getStaticLensArchiveArticles();
   const [firebaseArticles, lensArticles] = await Promise.all([
@@ -564,13 +610,15 @@ export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<
   }
 
   return [...bySlug.values()]
+    .filter((a) => !isDummyTestArticle(a))
+    .map(enhanceContextualCover)
     .sort((a, b) => b.publishedAtMs - a.publishedAtMs)
     .slice(0, maxCount);
 }
 
 export async function getArticleBySlug(slug: string): Promise<SiteArticle | null> {
   const firebaseArticle = await getPublishedFirebaseArticleBySlug(slug);
-  if (firebaseArticle) return firebaseArticle;
+  if (firebaseArticle) return enhanceContextualCover(firebaseArticle);
 
   const articles = await getAllArticles(DEFAULT_ARCHIVE_LIMIT);
   return articles.find((article) => article.slug === slug) ?? null;
