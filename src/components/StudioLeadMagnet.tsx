@@ -133,6 +133,73 @@ export function StudioLeadMagnet() {
           </p>
         </div>
 
+        {/* EXECUTIVE DILEMMA SELECTOR */}
+        <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Select Your Immediate Strategic Dilemma</span>
+            </span>
+            <span className="text-[11px] text-slate-500">Tailored Diagnostic Pathways</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveService("screenplay");
+                trackFunnelEvent({ name: "mofu_service_tab_view", service: "screenplay_dilemma" });
+              }}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeService === "screenplay"
+                  ? "border-amber-500/60 bg-amber-950/20 text-white shadow-sm"
+                  : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <strong className="block text-amber-300 font-semibold mb-1">
+                "Script in Development"
+              </strong>
+              <span>Will Act 2 sag or lose viewer stakes before budgeting $20M+?</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveService("roughcut");
+                trackFunnelEvent({ name: "mofu_service_tab_view", service: "roughcut_dilemma" });
+              }}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeService === "roughcut"
+                  ? "border-red-500/60 bg-red-950/20 text-white shadow-sm"
+                  : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <strong className="block text-red-300 font-semibold mb-1">
+                "Rough-Cut Standoff"
+              </strong>
+              <span>Director delivered 160 mins. Where do we trim 20 mins without breaking story?</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveService("ott");
+                trackFunnelEvent({ name: "mofu_service_tab_view", service: "ott_dilemma" });
+              }}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                activeService === "ott"
+                  ? "border-sky-500/60 bg-sky-950/20 text-white shadow-sm"
+                  : "border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              <strong className="block text-sky-300 font-semibold mb-1">
+                "OTT Acquisition Risk"
+              </strong>
+              <span>Will subscribers finish this title or abandon it at minute 50?</span>
+            </button>
+          </div>
+        </div>
+
         {/* PART 1: THE 3 CORE STUDIO SERVICES */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -181,6 +248,49 @@ export function StudioLeadMagnet() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* THE METHODOLOGY CONTRAST */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Why Traditional Coverage &amp; Focus Groups Fail Modern Studios</span>
+            </h4>
+            <span className="text-xs text-slate-500">The Empirical Advantage</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
+              <div className="text-red-400 font-bold flex items-center justify-between">
+                <span>Traditional Reader Coverage</span>
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-red-950 text-red-300">Flawed</span>
+              </div>
+              <p className="text-slate-400 leading-relaxed">
+                Subjective impressions ("witty dialogue, needs more heart") written by junior readers. Fails to identify mathematical second-act drop-offs before shooting.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-2">
+              <div className="text-amber-400 font-bold flex items-center justify-between">
+                <span>25-Person Recruited Focus Groups</span>
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300">Biased</span>
+              </div>
+              <p className="text-slate-400 leading-relaxed">
+                Contradictory exit surveys conducted after VFX are locked and budgets depleted. Directors dismiss notes as "unrepresentative noise."
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/20 p-4 space-y-2">
+              <div className="text-emerald-400 font-bold flex items-center justify-between">
+                <span>Greybrainer Morphokinetics™</span>
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-900 text-emerald-300">Empirical</span>
+              </div>
+              <p className="text-slate-300 leading-relaxed">
+                Minute-by-minute tension waveform + 7-layer structural diagnostic. Isolates exact scenes causing audience fatigue and delivers actionable rewrite directives under bilateral NDA.
+              </p>
+            </div>
           </div>
         </div>
 
