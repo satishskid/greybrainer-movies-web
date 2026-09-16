@@ -1,8 +1,32 @@
 import { NextResponse } from "next/server";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
+import { addDoc, collection, getDocs, limit, orderBy, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  };
+}
+
+export async function OPTIONS() {
+  return new Response(null, { status: 204, headers: corsHeaders() });
+}
+
+export async function GET(request: Request) {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "studio_leads"), orderBy("createdAt", "desc"), limit(25))
+    );
+    const leads = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return NextResponse.json({ leads }, { headers: corsHeaders() });
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || "Failed to load leads" }, { status: 500, headers: corsHeaders() });
+  }
+}
 
 export async function POST(request: Request) {
   try {
