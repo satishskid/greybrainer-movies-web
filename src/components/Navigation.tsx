@@ -13,7 +13,7 @@ export function Navigation() {
           <Link href="/insights#trends" className="hover:text-red-400 transition">Trend Intelligence</Link>
           <Link href="/insights#craft" className="hover:text-amber-300 transition">Craftsman Index</Link>
           <Link href="/comparisons" className="hover:text-purple-400 transition">Comparisons</Link>
-          <Link href="/reviews?tag=classic" className="hover:text-teal-300 transition">Masterclass Vault</Link>
+          <Link href="/archive" className="hover:text-teal-300 transition">Historical Archive</Link>
         </div>
       </div>
       

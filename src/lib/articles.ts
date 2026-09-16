@@ -579,3 +579,21 @@ export async function getArticleBySlug(slug: string): Promise<SiteArticle | null
 export function isArticleKind(value: string | null): value is ArticleKind {
   return value === "review" || value === "brief" || value === "insight" || value === "comparison";
 }
+
+export function isLegacyReview(article: SiteArticle): boolean {
+  const lowerTitle = article.title.toLowerCase();
+  if (lowerTitle.startsWith("greybrainer analysis:") || lowerTitle.startsWith("greybrainer analysis-")) {
+    return true;
+  }
+  return false;
+}
+
+export async function getModernArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<SiteArticle[]> {
+  const all = await getAllArticles(maxCount);
+  return all.filter((a) => !isLegacyReview(a));
+}
+
+export async function getLegacyArchiveArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<SiteArticle[]> {
+  const all = await getAllArticles(maxCount);
+  return all.filter((a) => isLegacyReview(a));
+}

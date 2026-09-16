@@ -93,25 +93,21 @@ export function StudioLeadMagnet() {
             </div>
           </div>
 
-          {/* Sample Dossier Download */}
+          {/* Specimen Dossier Notice */}
           <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-5 mt-6">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-sm font-semibold text-white">Sample Executive Diagnostic Dossier</h4>
-                <p className="text-xs text-slate-400">15-page comprehensive breakdown of pacing, ROI, and craft.</p>
+                <h4 className="text-sm font-semibold text-white">Executive Specimen Diagnostic Dossier</h4>
+                <p className="text-xs text-slate-400">15-page comprehensive breakdown of pacing, retention risk, and craft metrics.</p>
               </div>
             </div>
-            <a
-              href="/sample-studio-dossier.pdf"
-              download
-              className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span>Download Specimen Report (PDF)</span>
-            </a>
+            <div className="mt-3 flex items-center gap-2 text-xs font-medium text-emerald-400">
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+              <span>Dispatched directly to verified studio executives under bilateral NDA</span>
+            </div>
           </div>
         </div>
 
