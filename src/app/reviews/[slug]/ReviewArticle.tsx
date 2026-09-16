@@ -6,6 +6,7 @@ import { Clock, User, ArrowLeft, Share2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { SiteArticle } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
+import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
 
 interface ReviewArticleProps {
   article: SiteArticle;
@@ -173,6 +174,15 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
             )}
           </section>
         )}
+
+        {/* Proprietary Morphokinetics Narrative Pacing Waveform */}
+        <MorphokineticsWaveform
+          movieTitle={article.title}
+          teaserText={article.morphokineticsTeaser}
+          overallScore={article.overallScore}
+          storyScore={article.storyScore}
+          executionScore={article.executionScore}
+        />
 
         {article.diagnosticImages.length > 0 && (
           <section className="mb-12">
