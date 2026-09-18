@@ -29,7 +29,7 @@ Access to the Greybrainer Studio Suite is restricted to approved editorial accou
 - `satish@skids.health`
 
 ### 2. Sign-In Instructions
-1. Open the Studio Suite: **`https://codex-cloudflare-staging.greybrainer-dev.pages.dev/studio/publish-lane`** (or main engine `/`).
+1. Open the Studio Suite: **`https://engine.greybrain.in`** (or `/studio/publish-lane`).
 2. Click **"1-Click Studio Operator Sign In"** for immediate authorized session access, or choose **"Continue with Google"** with your whitelisted email.
 3. If you ever encounter an access prompt, ensure you are using one of the authorized emails listed above.
 
