@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Medium archive importer cache
 .medium-archive-cache
+.video-build
+test-article.ts
+test-voices.js

@@ -50,8 +50,8 @@ async function getArticle(id: string): Promise<VideoArticle> {
 
 async function generateAudio(script: string, outputFilename: string) {
   console.log(`\n🎙️ Generating voiceover via ElevenLabs...`);
-  // Voice ID for a generic professional voice (e.g. Adam)
-  const VOICE_ID = "pNInz6obpgDQGcFmaJcg"; 
+  // Custom Voice ID provided by the user
+  const VOICE_ID = "P7vsEyTOpZ6YUTulin8m"; 
 
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
     method: 'POST',
@@ -62,10 +62,12 @@ async function generateAudio(script: string, outputFilename: string) {
     },
     body: JSON.stringify({
       text: script,
-      model_id: "eleven_monolingual_v1",
+      model_id: "eleven_turbo_v2_5",
       voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75
+        stability: 0.25,
+        similarity_boost: 0.85,
+        style: 0.75,
+        use_speaker_boost: true
       }
     })
   });
@@ -124,7 +126,7 @@ async function renderVideo(projectDir: string) {
   
   // Using hyperframes CLI to render the index.html inside the project dir
   try {
-    execSync('npx hyperframes render index.html --output final.mp4 --width 1920 --height 1080', {
+    execSync('npx hyperframes render . --output final.mp4 --width 1920 --height 1080', {
       cwd: projectDir,
       stdio: 'inherit'
     });
