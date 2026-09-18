@@ -552,11 +552,33 @@ const GENERIC_SEATS_IMAGE = "photo-1489599849927-2ee91cede3ba";
 
 function isDummyTestArticle(article: SiteArticle): boolean {
   const title = (article.title || "").toLowerCase();
-  return (
+  const slug = (article.slug || "").toLowerCase();
+  const content = (article.content || "").trim();
+
+  // Explicit test artifacts
+  if (
     title.includes("direct browser client test") ||
     title === "direct test" ||
-    title.includes("dummy test")
-  );
+    title.includes("dummy test") ||
+    slug.includes("direct-browser-client-test")
+  ) {
+    return true;
+  }
+
+  // Thin mock review stubs (< 2000 chars for reviews, or mock stubs)
+  if (
+    article.kind === "review" &&
+    content.length < 2000 &&
+    (slug === "war-2-2026" ||
+      slug === "toxic-a-fairy-tale-for-grown-ups-2026" ||
+      slug === "toxic-2026" ||
+      content.includes("Craft-to-Fee Ratio (3.1x)") ||
+      content.includes("Craft-to-Fee Ratio (3.4x)"))
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function enhanceContextualCover(article: SiteArticle): SiteArticle {
@@ -629,8 +651,8 @@ export function isArticleKind(value: string | null): value is ArticleKind {
 }
 
 export function isLegacyReview(article: SiteArticle): boolean {
-  const lowerTitle = article.title.toLowerCase();
-  if (lowerTitle.startsWith("greybrainer analysis:") || lowerTitle.startsWith("greybrainer analysis-")) {
+  // Only consider static un-scored legacy entries from the old Medium lens archive as legacy
+  if (article.source === "lens-archive" && !article.storyScore && !article.morphokineticsTeaser) {
     return true;
   }
   return false;
