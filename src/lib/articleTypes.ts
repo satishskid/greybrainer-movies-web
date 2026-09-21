@@ -23,7 +23,7 @@ export interface SiteArticle {
   createdBy: string;
   publishedAt: string | null;
   publishedAtMs: number;
-  source: "firebase" | "lens-archive";
+  source: "cloudflare" | "firebase" | "lens-archive";
   sourceUrl?: string;
   status: string;
   tags: string[];

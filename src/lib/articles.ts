@@ -548,6 +548,175 @@ function getStaticLensArchiveArticles() {
   return (lensArchiveData.articles as LensArchiveEntry[]).map(normalizeStaticArchiveEntry);
 }
 
+const ENGINE_API_BASE = process.env.NEXT_PUBLIC_ENGINE_API_BASE || "https://engine.greybrain.in";
+
+interface CloudflareManifestRing {
+  label: string;
+  score: number | string;
+  description?: string;
+  highlights?: string[];
+}
+
+interface CloudflareManifestEntry {
+  slug: string;
+  title: string;
+  blogMarkdown: string;
+  canonicalUrl?: string | null;
+  category?: string | null;
+  contentType?: string | null;
+  dek?: string | null;
+  heroImageUrl?: string | null;
+  posterImageUrl?: string | null;
+  thumbnailImageUrl?: string | null;
+  thumbnailEyebrow?: string | null;
+  overallScore?: number | string | null;
+  publishedAt?: string | null;
+  reviewStage?: string | null;
+  scoreRings?: CloudflareManifestRing[];
+  morphokinetics?: {
+    cinematography?: number;
+    pacing?: number;
+    scoreDesign?: number;
+    visualAmbience?: number;
+    tempoShiftLabel?: string;
+    dominantBeat?: string;
+    flowSummary?: string;
+  } | null;
+  readingMetadata?: {
+    estimatedReadTime?: string;
+    sectionAnchors?: Array<{ id: string; label: string; wordCount: number }>;
+    relatedSlugs?: string[];
+  } | null;
+  keywords?: string[];
+  tags?: string[];
+  verdict?: string | null;
+  summary?: string | null;
+  summaryHook?: string | null;
+  websiteUrl?: string | null;
+}
+
+function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
+  const title = entry.title || "Untitled Review";
+  const tags = Array.isArray(entry.tags)
+    ? entry.tags.map(String)
+    : Array.isArray(entry.keywords)
+      ? entry.keywords.map(String)
+      : [];
+  const kind = inferKind(title, tags, entry.contentType || "review");
+  const publishedDate = entry.publishedAt ? new Date(entry.publishedAt) : new Date(0);
+  const content = entry.blogMarkdown || `# ${title}`;
+
+  let storyScore: string | undefined;
+  let conceptScore: string | undefined;
+  let executionScore: string | undefined;
+  if (Array.isArray(entry.scoreRings)) {
+    for (const ring of entry.scoreRings) {
+      const label = (ring.label || "").toLowerCase();
+      const scoreStr = String(ring.score ?? "");
+      if (label.includes("story") || label.includes("script")) storyScore = scoreStr;
+      else if (label.includes("concept")) conceptScore = scoreStr;
+      else if (label.includes("execution") || label.includes("craft") || label.includes("performance"))
+        executionScore = scoreStr;
+    }
+  }
+
+  const overallScore =
+    entry.overallScore !== null && entry.overallScore !== undefined
+      ? String(entry.overallScore)
+      : undefined;
+  const excerpt = entry.dek || entry.summary || makeExcerpt(content);
+  const coverImageUrl =
+    entry.heroImageUrl || entry.posterImageUrl || entry.thumbnailImageUrl || FALLBACK_IMAGES[kind];
+
+  let morphokineticsTeaser: string | undefined;
+  if (entry.morphokinetics?.flowSummary) {
+    morphokineticsTeaser = entry.morphokinetics.flowSummary;
+  } else if (entry.morphokinetics?.tempoShiftLabel) {
+    morphokineticsTeaser = `Tempo Shift: ${entry.morphokinetics.tempoShiftLabel}`;
+  }
+
+  return {
+    id: `cf-${entry.slug}`,
+    title,
+    slug: entry.slug,
+    kind,
+    categoryLabel: entry.category || categoryLabel(kind),
+    content,
+    editorial: content,
+    excerpt,
+    coverImageUrl,
+    createdBy: "Greybrainer AI",
+    publishedAt:
+      Number.isNaN(publishedDate.valueOf()) || publishedDate.valueOf() === 0
+        ? null
+        : publishedDate.toISOString(),
+    publishedAtMs: Number.isNaN(publishedDate.valueOf()) ? 0 : publishedDate.valueOf(),
+    source: "cloudflare",
+    sourceUrl: entry.canonicalUrl || entry.websiteUrl || undefined,
+    status: "published",
+    tags,
+    type: "sovereign_review",
+    seoTitle: entry.title,
+    seoDescription: entry.summary || entry.dek || undefined,
+    searchHeadline: entry.summaryHook || undefined,
+    verdict: entry.verdict || undefined,
+    whoShouldWatch: undefined,
+    storyScore,
+    conceptScore,
+    executionScore,
+    overallScore,
+    morphokineticsTeaser,
+    producerInsight: undefined,
+    faqs: [],
+    relatedSlugs: entry.readingMetadata?.relatedSlugs ?? [],
+    inlineImageUrls: [],
+    diagnosticImages: [],
+  };
+}
+
+async function getCloudflarePublishedArticles(maxCount = 50): Promise<SiteArticle[]> {
+  try {
+    const url = `${ENGINE_API_BASE}/api/public/lens/manifest?limit=${maxCount}`;
+    const response = await fetch(url, {
+      headers: { accept: "application/json" },
+      next: { revalidate: 60 },
+    } as RequestInit & { next: { revalidate: number } });
+
+    if (!response.ok) {
+      console.warn(`Engine public manifest returned ${response.status}`);
+      return [];
+    }
+
+    const data = (await response.json()) as { entries?: CloudflareManifestEntry[] };
+    const entries = Array.isArray(data.entries) ? data.entries : [];
+    return entries.map(normalizeCloudflareEntry);
+  } catch (error) {
+    console.error("Failed to load Cloudflare published articles:", error);
+    return [];
+  }
+}
+
+async function getCloudflareArticleBySlug(slug: string): Promise<SiteArticle | null> {
+  try {
+    const url = `${ENGINE_API_BASE}/api/public/lens/manifest?slug=${encodeURIComponent(slug)}`;
+    const response = await fetch(url, {
+      headers: { accept: "application/json" },
+      next: { revalidate: 60 },
+    } as RequestInit & { next: { revalidate: number } });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as { entries?: CloudflareManifestEntry[] };
+    const entry = data.entries?.[0];
+    return entry ? normalizeCloudflareEntry(entry) : null;
+  } catch (error) {
+    console.error(`Failed to load Cloudflare article for slug "${slug}":`, error);
+    return null;
+  }
+}
+
 const GENERIC_SEATS_IMAGE = "photo-1489599849927-2ee91cede3ba";
 
 function isDummyTestArticle(article: SiteArticle): boolean {
@@ -618,13 +787,14 @@ function enhanceContextualCover(article: SiteArticle): SiteArticle {
 
 export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<SiteArticle[]> {
   const staticLensArticles = getStaticLensArchiveArticles();
-  const [firebaseArticles, lensArticles] = await Promise.all([
+  const [cloudflareArticles, firebaseArticles, lensArticles] = await Promise.all([
+    withTimeout(getCloudflarePublishedArticles(maxCount), [], "Cloudflare published articles"),
     withTimeout(getPublishedFirebaseArticles(maxCount), [], "Firebase published articles"),
     withTimeout(getLensArchiveArticles(), [], "Lens archive feed"),
   ]);
 
   const bySlug = new Map<string, SiteArticle>();
-  for (const article of [...firebaseArticles, ...staticLensArticles, ...lensArticles]) {
+  for (const article of [...cloudflareArticles, ...firebaseArticles, ...staticLensArticles, ...lensArticles]) {
     if (!article.slug) continue;
     if (!bySlug.has(article.slug)) {
       bySlug.set(article.slug, article);
@@ -639,6 +809,9 @@ export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT): Promise<
 }
 
 export async function getArticleBySlug(slug: string): Promise<SiteArticle | null> {
+  const cloudflareArticle = await getCloudflareArticleBySlug(slug);
+  if (cloudflareArticle) return enhanceContextualCover(cloudflareArticle);
+
   const firebaseArticle = await getPublishedFirebaseArticleBySlug(slug);
   if (firebaseArticle) return enhanceContextualCover(firebaseArticle);
 
@@ -651,6 +824,9 @@ export function isArticleKind(value: string | null): value is ArticleKind {
 }
 
 export function isLegacyReview(article: SiteArticle): boolean {
+  if (article.source === "cloudflare") {
+    return false;
+  }
   // Only consider static un-scored legacy entries from the old Medium lens archive as legacy
   if (article.source === "lens-archive" && !article.storyScore && !article.morphokineticsTeaser) {
     return true;
