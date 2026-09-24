@@ -20,7 +20,7 @@ Every developer, autonomous AI agent, and system operator MUST strictly adhere t
    **https://movies.greybrain.in/reviews/:slug**
 3. All legacy `.ai` domains (`cinema.greybrain.ai`, `movie.greybrain.ai`, `cinema.greybrain.in`) are permanently deprecated, retired, and forbidden in:
    - Application routing and links.
-   - Database records (Cloudflare D1, Turso, Firestore).
+   - Database records (Cloudflare D1, Turso).
    - Social syndication copies (Medium, LinkedIn, X, Instagram, Facebook).
 4. Any legacy record or user input referencing deprecated domains MUST be automatically rewritten to `https://movies.greybrain.in/reviews/:slug` via `sanitizeWebsiteUrl` and `resolveCanonicalUrl`.
 
@@ -39,7 +39,7 @@ The editorial workflow follows a mandatory 6-stage continuum:
 - **`01: Intelligence`** (`/` or `/studio/manual`): Screenplay forensics, pacing curves, character arcs, telemetry.
 - **`02: Synthesis`** (Movie Engine output): Full 7-layer critique, 50-word verdict, 3-layer scoring.
 - **`03: Asset Studio`** (`/studio/publish-lane` tab 1): TMDB poster selection, 5 visual ratios, Craftmatics approvals.
-- **`04: Sovereign Publish`** (`/studio/publish-lane` tab 2): Simulated dry-run and live Cloudflare D1/R2 + Postiz dispatch.
+- **`04: Sovereign Publish`** (`/studio/publish-lane` tab 2): Simulated dry-run and live Cloudflare D1/R2 + direct SocialBu/CFPostiz dispatch.
 - **`05: Live Storefront`** (`https://movies.greybrain.in/reviews/:slug`): One-click verification on the live storefront.
 
 **Continuity Guarantee**: Step transitions and stepper navigation MUST preserve `activeDraftId` and `publishedUrl` so users and editors never lose active context.
@@ -67,9 +67,18 @@ The editorial workflow follows a mandatory 6-stage continuum:
 
 ---
 
-### LAW 7: The Sovereign Social Dispatch Law
-1. Multi-channel syndication routes through the sovereign CFPostiz engine (`https://digisocial.greybrain.ai`).
+### LAW 7: The Sovereign Social Syndication Law
+1. Multi-channel syndication supports **Direct Native SocialBu Integration** (zero intermediate proxy hops) as the primary, ultra-stable organic posting pipeline, alongside sovereign CFPostiz (`https://digisocial.greybrain.ai`).
 2. The website publication must always be dispatched first (or verified via dry review) to guarantee that the canonical review link (`https://movies.greybrain.in/reviews/:slug`) is embedded in social thread previews and copies.
+3. Upstream platform post IDs and confirmation tokens MUST be persisted to Cloudflare D1 `publication_records`.
+
+---
+
+### LAW 8: The Zero-Firestore Invariant (Strictly Enforced)
+1. **Firestore is 100% deceased, purged, and forbidden.**
+2. Cloudflare D1 (`greybrainer-staging`) and Cloudflare R2 (`greybrainer-staging-content`) are the SOLE active databases and object stores.
+3. Firebase is retained **EXCLUSIVELY** for client-side user authentication (Google SSO & Email login) via `firebase/auth`. No code, service, script, or AI agent shall ever attempt to read, write, query, configure, or depend on Cloud Firestore.
+4. Any agent attempting to introduce Firestore imports (`@firebase/firestore`, `getFirestore`, `doc`, `setDoc`, `collection`) or Firestore rules violates this law and must immediately be reverted.
 
 ---
 
