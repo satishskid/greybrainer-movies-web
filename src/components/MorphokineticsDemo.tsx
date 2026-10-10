@@ -63,13 +63,13 @@ export function MorphokineticsDemo() {
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-teal-400">
             <Activity className="w-4 h-4" />
-            <span>Proprietary Telemetry Architecture</span>
+            <span>Illustrative Methodology Example</span>
           </div>
           <h3 className="text-2xl sm:text-3xl font-bold text-white mt-1">
-            Morphokinetics™ Runtime Engagement Graph
+            Morphokinetics: Narrative Engagement
           </h3>
           <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-            Minute-by-minute audience retention risk vs. narrative tension. Used by OTT acquisition teams and producers to isolate structural drop-off points before greenlight.
+            Illustrative curves, not measured audience retention. Published analyses connect estimated engagement changes to scene evidence and craft decisions; these examples demonstrate the reading method only.
           </p>
         </div>
 

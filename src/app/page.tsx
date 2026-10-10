@@ -68,12 +68,35 @@ export default async function Home() {
 
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] max-w-4xl">
-            Where Films Are Diagnosed Before Greenlight &amp; Evaluated for Impact.
+            Greybrainer Film Intelligence
           </h1>
 
           <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl leading-relaxed font-normal">
-            Predictive screenplay diagnostics, structural pacing telemetry, and auteur craft benchmarks for studio executives, producers, and creative heads.
+            Evidence-linked film analysis for writers, directors and producers: what worked, why it worked, and what could improve.
           </p>
+
+          {hero && (
+            <div className="mt-8 max-w-4xl border-y border-white/25 py-6">
+              <Link href={`/reviews/${hero.slug}`} className="text-2xl sm:text-3xl font-bold text-white hover:underline">{hero.title}</Link>
+              <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-200">{hero.verdict || hero.excerpt}</p>
+              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+                {[
+                  { label: "Story & Screenplay", value: hero.storyScore },
+                  { label: "Direction & Orchestration", value: hero.conceptScore },
+                  { label: "Performance & Craft", value: hero.executionScore },
+                ].map(({ label, value }) => {
+                  const score = value ? Number.parseFloat(value) : NaN;
+                  const valid = Number.isFinite(score) && score >= 0 && score <= 10;
+                  return <div key={label}>
+                    <div className="flex justify-between gap-2 text-sm font-semibold"><span>{label}</span><span>{valid ? `${score}/10` : "Unscored"}</span></div>
+                    <div className="mt-2 h-2 bg-white/20"><div className="h-full bg-red-500" style={{ width: valid ? `${score * 10}%` : "0%" }} /></div>
+                  </div>;
+                })}
+              </div>
+              <p className="mt-3 text-xs text-slate-300">Editorial assessments, not measured audience ratings. Evidence and limitations are in the full report.</p>
+              <Link href={`/reviews/${hero.slug}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">Read the full analysis <ChevronRight className="h-4 w-4" /></Link>
+            </div>
+          )}
 
           {/* Hero Action Buttons */}
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -114,7 +137,7 @@ export default async function Home() {
                 Active Diagnostic Dossiers &amp; Industry Briefings
               </h2>
               <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-                Empirical critiques, box office behavioral analyses, and narrative tension post-mortems.
+                Film critiques, industry briefings, and evidence-linked craft analysis.
               </p>
             </div>
             <Link

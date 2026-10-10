@@ -372,7 +372,7 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
       const label = (ring.label || "").toLowerCase();
       const scoreStr = String(ring.score ?? "");
       if (label.includes("story") || label.includes("script")) storyScore = scoreStr;
-      else if (label.includes("concept")) conceptScore = scoreStr;
+      else if (label.includes("concept") || label.includes("direction") || label.includes("orchestration")) conceptScore = scoreStr;
       else if (label.includes("execution") || label.includes("craft") || label.includes("performance"))
         executionScore = scoreStr;
     }

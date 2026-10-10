@@ -36,6 +36,7 @@ export function StudioLeadMagnet() {
   const [vipSubmitting, setVipSubmitting] = useState(false);
   const [vipSubmitted, setVipSubmitted] = useState(false);
   const [vipError, setVipError] = useState<string | null>(null);
+  const [vipRequestId, setVipRequestId] = useState<string | null>(null);
 
   const handleVipSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +47,8 @@ export function StudioLeadMagnet() {
 
     setVipSubmitting(true);
     setVipError(null);
+    const requestId = vipRequestId || crypto.randomUUID();
+    setVipRequestId(requestId);
 
     try {
       const res = await fetch("/api/studio-diagnostic", {
@@ -53,6 +56,7 @@ export function StudioLeadMagnet() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: vipEmail,
+          requestId,
           studioName: vipStudio || "Studio / Independent",
           type: "vip_registration",
           serviceInterest: activeService,
@@ -610,9 +614,9 @@ export function StudioLeadMagnet() {
             {vipSubmitted ? (
               <div className="p-6 rounded-xl border border-emerald-500/30 bg-emerald-950/20 text-center space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                <h5 className="text-base font-bold text-white">Executive Pass Registered</h5>
+                <h5 className="text-base font-bold text-white">Enquiry Saved</h5>
                 <p className="text-xs text-slate-300">
-                  Welcome aboard. Our executive relations team will send your credentials and the unredacted dossier archive to <span className="text-white font-semibold">{vipEmail}</span>.
+                  Your request has been saved for the studio desk. Contact email: <span className="text-white font-semibold">{vipEmail}</span>. This is not an automatic email subscription.
                 </p>
               </div>
             ) : (
