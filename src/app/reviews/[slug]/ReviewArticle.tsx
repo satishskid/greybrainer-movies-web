@@ -7,6 +7,7 @@ import Link from "next/link";
 import type { SiteArticle } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
 import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
+import { CraftmaticsReport } from "@/components/CraftmaticsReport";
 
 interface ReviewArticleProps {
   article: SiteArticle;
@@ -175,13 +176,11 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
           </section>
         )}
 
-        {/* Proprietary Morphokinetics Narrative Pacing Waveform */}
+        <CraftmaticsReport criteria={article.craftmatics} />
         <MorphokineticsWaveform
           movieTitle={article.title}
           teaserText={article.morphokineticsTeaser}
-          overallScore={article.overallScore}
-          storyScore={article.storyScore}
-          executionScore={article.executionScore}
+          moments={article.engagementMoments}
         />
 
         {article.diagnosticImages.length > 0 && (

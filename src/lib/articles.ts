@@ -1,5 +1,5 @@
 import lensArchiveData from "@/data/lensArchive.json";
-import type { ArticleKind, SiteArticle } from "@/lib/articleTypes";
+import type { ArticleKind, SiteArticle, CraftCriterionResult, EngagementMoment } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
 import { isPublicWebsiteEntry, PRODUCTION_ENGINE_API } from "@/lib/publication-feed";
 
@@ -316,6 +316,7 @@ interface CloudflareManifestRing {
 }
 
 interface CloudflareManifestEntry {
+  craftmatics?: CraftCriterionResult[];
   slug: string;
   title: string;
   blogMarkdown: string;
@@ -332,6 +333,9 @@ interface CloudflareManifestEntry {
   reviewStage?: string | null;
   scoreRings?: CloudflareManifestRing[];
   morphokinetics?: {
+    summary?: string | null;
+    timelineNotes?: string | null;
+    keyMoments?: Array<{ position?: number; timeLabel?: string; intensity: number; event: string; emotion?: string }>;
     cinematography?: number;
     pacing?: number;
     scoreDesign?: number;
@@ -387,7 +391,9 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
     entry.heroImageUrl || entry.posterImageUrl || entry.thumbnailImageUrl || FALLBACK_IMAGES[kind];
 
   let morphokineticsTeaser: string | undefined;
-  if (entry.morphokinetics?.flowSummary) {
+  if (entry.morphokinetics?.summary) {
+    morphokineticsTeaser = entry.morphokinetics.summary;
+  } else if (entry.morphokinetics?.flowSummary) {
     morphokineticsTeaser = entry.morphokinetics.flowSummary;
   } else if (entry.morphokinetics?.tempoShiftLabel) {
     morphokineticsTeaser = `Tempo Shift: ${entry.morphokinetics.tempoShiftLabel}`;
@@ -395,6 +401,11 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
 
   return {
     id: `cf-${entry.slug}`,
+    craftmatics: Array.isArray(entry.craftmatics) ? entry.craftmatics : [],
+    engagementMoments: (entry.morphokinetics?.keyMoments || []).map(moment => ({
+      position: moment.position ?? (/^~?\d+(?:\.\d+)?%$/.test(moment.timeLabel || '') ? Number(moment.timeLabel!.replace(/[~%]/g, '')) / 100 : NaN),
+      intensity: moment.intensity, event: moment.event, emotion: moment.emotion,
+    })).filter((moment): moment is EngagementMoment => Number.isFinite(moment.position) && moment.position >= 0 && moment.position <= 1 && Number.isFinite(moment.intensity) && moment.intensity >= 0 && moment.intensity <= 10 && typeof moment.event === 'string' && !!moment.event.trim()).sort((a, b) => a.position - b.position),
     title,
     slug: entry.slug,
     kind,

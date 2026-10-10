@@ -11,6 +11,8 @@ export interface ArticleDiagnosticImage {
 }
 
 export interface SiteArticle {
+  craftmatics?: CraftCriterionResult[];
+  engagementMoments?: EngagementMoment[];
   id: string;
   title: string;
   slug: string;
@@ -44,4 +46,29 @@ export interface SiteArticle {
   relatedSlugs: string[];
   inlineImageUrls: string[];
   diagnosticImages: ArticleDiagnosticImage[];
+}
+
+export interface EngagementMoment {
+  position: number;
+  intensity: number;
+  event: string;
+  emotion?: string;
+}
+
+export interface CraftCriterionResult {
+  id: string;
+  label: string;
+  department: string;
+  score: number | null;
+  status: string;
+  evidence?: string | null;
+  locator?: string | null;
+  mechanism?: string | null;
+  improvement?: string | null;
+  preserve?: string | null;
+  tradeOff?: string | null;
+  test?: string | null;
+  uncertainty?: string | null;
+  rationale?: string | null;
+  contributors: { name: string; role: string; portraitUrl?: string | null; sourceUrl?: string | null }[];
 }
