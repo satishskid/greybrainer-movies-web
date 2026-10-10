@@ -1,6 +1,7 @@
 import lensArchiveData from "@/data/lensArchive.json";
 import type { ArticleDiagnosticImage, ArticleFaq, ArticleKind, SiteArticle } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
+import { isPublicWebsiteEntry, PRODUCTION_ENGINE_API } from "@/lib/publication-feed";
 
 const LENS_FEED_URL = process.env.LENS_ARCHIVE_FEED_URL || "https://medium.com/feed/@GreyBrainer";
 const DEFAULT_ARCHIVE_LIMIT = 220;
@@ -548,7 +549,7 @@ function getStaticLensArchiveArticles() {
   return (lensArchiveData.articles as LensArchiveEntry[]).map(normalizeStaticArchiveEntry);
 }
 
-const ENGINE_API_BASE = process.env.NEXT_PUBLIC_ENGINE_API_BASE || "https://engine.greybrain.in";
+const ENGINE_API_BASE = process.env.NEXT_PUBLIC_ENGINE_API_BASE || PRODUCTION_ENGINE_API;
 
 interface CloudflareManifestRing {
   label: string;
@@ -689,7 +690,7 @@ async function getCloudflarePublishedArticles(maxCount = 50): Promise<SiteArticl
 
     const data = (await response.json()) as { entries?: CloudflareManifestEntry[] };
     const entries = Array.isArray(data.entries) ? data.entries : [];
-    return entries.map(normalizeCloudflareEntry);
+    return entries.filter(isPublicWebsiteEntry).map(normalizeCloudflareEntry);
   } catch (error) {
     console.error("Failed to load Cloudflare published articles:", error);
     return [];
@@ -709,7 +710,7 @@ async function getCloudflareArticleBySlug(slug: string): Promise<SiteArticle | n
     }
 
     const data = (await response.json()) as { entries?: CloudflareManifestEntry[] };
-    const entry = data.entries?.[0];
+    const entry = data.entries?.find((item) => item.slug === slug && isPublicWebsiteEntry(item));
     return entry ? normalizeCloudflareEntry(entry) : null;
   } catch (error) {
     console.error(`Failed to load Cloudflare article for slug "${slug}":`, error);
