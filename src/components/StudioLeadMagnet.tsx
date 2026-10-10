@@ -59,8 +59,9 @@ export function StudioLeadMagnet() {
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("Registration failed. Please contact dr.satish@greybrain.ai directly.");
+      const receipt = await res.json();
+      if (!res.ok || receipt.success !== true) {
+        throw new Error(receipt.error || "Your enquiry has not been sent. Please email dr.satish@greybrain.ai directly.");
       }
 
       setVipSubmitted(true);
@@ -617,8 +618,11 @@ export function StudioLeadMagnet() {
             ) : (
               <form onSubmit={handleVipSubmit} className="space-y-3">
                 {vipError && (
-                  <div className="p-2.5 rounded-lg border border-red-500/40 bg-red-500/10 text-xs text-red-300">
+                  <div role="alert" className="p-2.5 rounded-lg border border-red-500/40 bg-red-500/10 text-xs text-red-300">
                     {vipError}
+                    <a className="mt-2 block underline" href={`mailto:dr.satish@greybrain.ai?subject=${encodeURIComponent("Studio diagnostic enquiry")}&body=${encodeURIComponent(`Studio: ${vipStudio}\nContact email: ${vipEmail}\nService: ${activeService}\n\nProject details: `)}`}>
+                      Email the studio desk
+                    </a>
                   </div>
                 )}
 
