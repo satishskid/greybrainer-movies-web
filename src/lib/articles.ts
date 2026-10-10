@@ -1,5 +1,5 @@
 import lensArchiveData from "@/data/lensArchive.json";
-import type { ArticleKind, SiteArticle, CraftCriterionResult, EngagementMoment } from "@/lib/articleTypes";
+import type { ArticleKind, SiteArticle, CraftCriterionResult } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
 import { isPublicWebsiteEntry, PRODUCTION_ENGINE_API } from "@/lib/publication-feed";
 
@@ -405,7 +405,7 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
     engagementMoments: (entry.morphokinetics?.keyMoments || []).map(moment => ({
       position: moment.position ?? (/^~?\d+(?:\.\d+)?%$/.test(moment.timeLabel || '') ? Number(moment.timeLabel!.replace(/[~%]/g, '')) / 100 : NaN),
       intensity: moment.intensity, event: moment.event, emotion: moment.emotion,
-    })).filter((moment): moment is EngagementMoment => Number.isFinite(moment.position) && moment.position >= 0 && moment.position <= 1 && Number.isFinite(moment.intensity) && moment.intensity >= 0 && moment.intensity <= 10 && typeof moment.event === 'string' && !!moment.event.trim()).sort((a, b) => a.position - b.position),
+    })).filter((moment) => Number.isFinite(moment.position) && moment.position >= 0 && moment.position <= 1 && Number.isFinite(moment.intensity) && moment.intensity >= 0 && moment.intensity <= 10 && typeof moment.event === 'string' && !!moment.event.trim()).sort((a, b) => a.position - b.position),
     title,
     slug: entry.slug,
     kind,
