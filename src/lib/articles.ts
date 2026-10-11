@@ -325,6 +325,7 @@ interface CloudflareManifestEntry {
   contentType?: string | null;
   dek?: string | null;
   heroImageUrl?: string | null;
+  imageAttribution?: string | null;
   posterImageUrl?: string | null;
   thumbnailImageUrl?: string | null;
   thumbnailEyebrow?: string | null;
@@ -414,6 +415,7 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
     editorial: content,
     excerpt,
     coverImageUrl,
+    imageAttribution: typeof entry.imageAttribution === 'string' ? entry.imageAttribution.trim() || undefined : undefined,
     createdBy: "Greybrainer AI",
     publishedAt:
       Number.isNaN(publishedDate.valueOf()) || publishedDate.valueOf() === 0
@@ -470,8 +472,8 @@ async function getCloudflareArticleBySlug(slug: string): Promise<SiteArticle | n
     const url = `${ENGINE_API_BASE}/api/public/lens/manifest?slug=${encodeURIComponent(slug)}`;
     const response = await fetch(url, {
       headers: { accept: "application/json" },
-      next: { revalidate: 60 },
-    } as RequestInit & { next: { revalidate: number } });
+      cache: 'no-store',
+    });
 
     if (!response.ok) {
       return null;

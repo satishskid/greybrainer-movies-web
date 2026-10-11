@@ -13,7 +13,7 @@ export function CraftmaticsReport({ criteria = [] }: { criteria?: CraftCriterion
   ].map(([id, label, department]) => criteria.find(item => item.id === id) || { id, label, department, score: null, status: 'unscored', contributors: [] });
   return <section className="my-10 border-y border-slate-700 py-8">
     <h2 className="text-2xl font-bold text-white">Craftmatics: the maker’s report card</h2>
-    <p className="mt-2 text-sm text-slate-400">Evidence-linked, human-reviewed ordinal scores out of 4. Department attribution is craft responsibility, not an individual rating.</p>
+    <p className="mt-2 text-sm text-slate-400">Evidence-linked editorial scores out of 4, not measured audience response. Department attribution is craft responsibility, not an individual rating.</p>
     {!criteria.length && <p className="mt-3 text-sm text-amber-300">Reviewed benchmark data has not been supplied for this article.</p>}
     <div className="mt-6 grid gap-x-8 gap-y-6 md:grid-cols-2">{rows.map(criterion => {
       const scored = criterion.status === 'reviewed' && typeof criterion.score === 'number' && Number.isInteger(criterion.score) && criterion.score >= 0 && criterion.score <= 4 && !!criterion.evidence;

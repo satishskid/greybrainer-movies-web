@@ -22,6 +22,7 @@ export interface SiteArticle {
   editorial: string | null;
   excerpt: string;
   coverImageUrl?: string;
+  imageAttribution?: string;
   createdBy: string;
   publishedAt: string | null;
   publishedAtMs: number;

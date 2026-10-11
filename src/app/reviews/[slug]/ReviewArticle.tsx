@@ -8,6 +8,7 @@ import type { SiteArticle } from "@/lib/articleTypes";
 import { publicAuthorName } from "@/lib/site";
 import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
 import { CraftmaticsReport } from "@/components/CraftmaticsReport";
+import { ImageCredits } from "@/components/ImageCredits";
 
 interface ReviewArticleProps {
   article: SiteArticle;
@@ -63,7 +64,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
             {article.title}
           </h1>
-          <div className="flex items-center space-x-6 text-slate-300 text-sm">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-slate-300 text-sm">
             <span className="flex items-center">
               <User className="w-4 h-4 mr-2" />
               {authorName}
@@ -110,6 +111,9 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
 
       {/* Article Body */}
       <div className="max-w-4xl mx-auto px-8 py-12">
+        {article.source === 'cloudflare' && <aside aria-label="Research limitations" className="mb-8 border-l-2 border-amber-400 pl-4 text-sm leading-relaxed text-slate-300">
+          AI-assisted research synthesis. Scores, timings and the waveform are model interpretations, not measured viewer telemetry. Check film-level claims and suggested edits against the film before making production decisions.
+        </aside>}
         {structuredHighlights && (
           <section className="mb-12 border border-slate-800 bg-slate-900/80 rounded-lg overflow-hidden">
             {article.searchHeadline && article.searchHeadline !== article.title && (
@@ -152,26 +156,13 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
               </div>
             )}
 
-            {(article.morphokineticsTeaser || article.producerInsight) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-                {article.morphokineticsTeaser && (
-                  <div className="border-b md:border-b-0 md:border-r border-slate-800 p-6">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-300">
-                      Morphokinetics Teaser
-                    </h2>
-                    <p className="mt-3 text-slate-300 leading-7">{article.morphokineticsTeaser}</p>
-                  </div>
-                )}
-
-                {article.producerInsight && (
+            {article.producerInsight && (
                   <div className="p-6">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-300">
                       Producer / Director Lens
                     </h2>
                     <p className="mt-3 text-slate-300 leading-7">{article.producerInsight}</p>
                   </div>
-                )}
-              </div>
             )}
           </section>
         )}
@@ -238,7 +229,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
           prose-hr:border-slate-700
           prose-code:text-red-300 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
         ">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ h1: ({ children }) => <h2>{children}</h2> }}>{displayContent}</ReactMarkdown>
         </div>
 
         {article.faqs.length > 0 && (
@@ -274,6 +265,8 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
             </div>
           </section>
         )}
+
+        <ImageCredits attribution={article.imageAttribution} imageUrl={article.coverImageUrl} />
 
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-slate-800">

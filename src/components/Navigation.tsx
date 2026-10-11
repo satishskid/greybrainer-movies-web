@@ -3,12 +3,12 @@ import { Search } from 'lucide-react';
 
 export function Navigation() {
   return (
-    <nav className="fixed top-0 w-full z-50 bg-gradient-to-b from-slate-900/90 to-transparent transition-all duration-300 px-8 py-4 flex items-center justify-between">
-      <div className="flex items-center space-x-8">
-        <Link href="/" className="text-2xl font-bold text-red-600 tracking-tighter">
+    <nav className="fixed top-0 w-full z-50 bg-gradient-to-b from-slate-900/90 to-transparent transition-all duration-300 px-3 sm:px-8 py-4 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-8">
+        <Link href="/" className="text-lg sm:text-2xl font-bold text-red-600">
           GREYBRAINER
         </Link>
-        <div className="hidden lg:flex items-center space-x-6 text-sm font-medium text-slate-200">
+        <div className="hidden xl:flex items-center space-x-6 text-sm font-medium text-slate-200">
           <Link href="/reviews" className="hover:text-slate-400 transition">Deep Reviews</Link>
           <Link href="/insights#trends" className="hover:text-red-400 transition">Trend Intelligence</Link>
           <Link href="/insights#craft" className="hover:text-amber-300 transition">Craftsman Index</Link>
@@ -17,7 +17,7 @@ export function Navigation() {
         </div>
       </div>
       
-      <div className="flex items-center space-x-4 text-slate-200">
+      <div className="flex shrink-0 items-center space-x-1.5 sm:space-x-4 text-slate-200">
         {/* Studio Diagnostic CTA */}
         <Link
           href="/#studio-diagnostic"
