@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 
 export function Navigation() {
   return (
-    <nav className="fixed top-0 w-full z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur px-3 sm:px-8 py-3 flex items-center justify-between gap-2">
+    <nav aria-label="Main navigation" className="fixed top-0 w-full z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur px-3 sm:px-8 py-3 flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-8">
         <Link href="/" className="text-lg sm:text-2xl font-bold text-red-600">
           GREYBRAINER
@@ -41,6 +41,11 @@ export function Navigation() {
         <Link href="/reviews" aria-label="Search Reviews">
           <Search className="w-5 h-5 cursor-pointer hover:text-white transition" />
         </Link>
+      </div>
+      <div className="flex w-full items-center gap-5 border-t border-slate-800 pt-2 text-xs text-slate-200 sm:hidden">
+        <Link href="/reviews" className="py-1">Reports</Link>
+        <Link href="/#method" className="py-1">Method</Link>
+        <Link href="/#studio-diagnostic" className="ml-auto py-1 text-teal-200">For filmmakers &rarr;</Link>
       </div>
     </nav>
   );

@@ -21,7 +21,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
   const layers = article.layers ?? [];
 
   return (
-    <article className="min-h-screen bg-slate-950 pb-20 pt-24 text-slate-300">
+    <article className="min-h-screen bg-slate-950 pb-20 pt-28 sm:pt-24 text-slate-300">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         {/* 1. Film identity and the finding */}
         <header className="grid gap-6 border-b border-slate-800 pb-8 sm:grid-cols-[160px_1fr] sm:gap-8">

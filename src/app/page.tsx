@@ -22,7 +22,7 @@ export default async function Home() {
   return (
     <main className="flex-1 bg-slate-950 pb-20 text-slate-300">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <section className="pt-24 pb-10">
+        <section className="pt-28 sm:pt-24 pb-10">
           <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">Film analysis for the people who make films</h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-300">
             What works in a film, what does not, why, and what a maker could change. Each report is AI-assisted research,
