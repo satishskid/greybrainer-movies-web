@@ -18,7 +18,8 @@ import type { SiteArticle } from "@/lib/articleTypes";
 import { MorphokineticsDemo } from "@/components/MorphokineticsDemo";
 import { StudioLeadMagnet } from "@/components/StudioLeadMagnet";
 
-export const revalidate = 900;
+// ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
+export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const articles = await getAllArticles(60);

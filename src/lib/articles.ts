@@ -1,4 +1,4 @@
-import type { ArticleKind, SiteArticle, CraftCriterionResult } from "@/lib/articleTypes";
+import type { ArticleKind, SiteArticle, CraftCriterionResult, ResearchLayer } from "@/lib/articleTypes";
 import { isPublicWebsiteEntry, publicApi } from "@/lib/publication-feed";
 
 const DEFAULT_ARCHIVE_LIMIT = 200;
@@ -137,6 +137,9 @@ interface CloudflareManifestEntry {
   summary?: string | null;
   summaryHook?: string | null;
   websiteUrl?: string | null;
+  year?: string | number | null;
+  blogHtml?: string | null;
+  cast?: string | null;
 }
 
 function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
@@ -149,6 +152,16 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
   const kind = inferKind(title, tags, entry.contentType || "review");
   const publishedDate = entry.publishedAt ? new Date(entry.publishedAt) : new Date(0);
   const content = entry.blogMarkdown || `# ${title}`;
+  const cast = entry.cast?.trim() || undefined;
+  const layerName = (label: string): ResearchLayer["label"] | null =>
+    /story|script/i.test(label) ? "Story / Script"
+    : /concept|direction|orchestration/i.test(label) ? "Direction / Orchestration"
+    : /performance|execution/i.test(label) ? "Performance / Execution" : null;
+  const layers = (entry.scoreRings ?? []).flatMap(ring => {
+    const label = layerName(ring.label || "");
+    const score = Number(ring.score);
+    return label && Number.isFinite(score) && score >= 0 && score <= 10 ? [{ label, score, description: ring.description }] : [];
+  });
 
   let storyScore: string | undefined;
   let conceptScore: string | undefined;
@@ -169,8 +182,7 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
       ? String(entry.overallScore)
       : undefined;
   const excerpt = entry.dek || entry.summary || makeExcerpt(content);
-  const coverImageUrl =
-    entry.heroImageUrl || entry.posterImageUrl || entry.thumbnailImageUrl || undefined;
+  const coverImageUrl = [entry.heroImageUrl, entry.posterImageUrl, entry.thumbnailImageUrl].find(url => url?.startsWith("https://")) || undefined;
 
   let morphokineticsTeaser: string | undefined;
   if (entry.morphokinetics?.summary) {
@@ -183,6 +195,13 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
 
   return {
     id: `cf-${entry.slug}`,
+    // Rendered by the backend: exactly what the publication receipt verifies on this page.
+    contentHtml: entry.blogHtml ?? undefined,
+    layers,
+    cast,
+    year: entry.year ? String(entry.year) : undefined,
+    // Only real images; the backend's generated SVG placeholder is not a poster.
+    posterImageUrl: entry.posterImageUrl?.startsWith("https://") ? entry.posterImageUrl : undefined,
     craftmatics: Array.isArray(entry.craftmatics) ? entry.craftmatics : [],
     engagementMoments: (entry.morphokinetics?.keyMoments || []).map(moment => ({
       position: moment.position ?? (/^~?\d+(?:\.\d+)?%$/.test(moment.timeLabel || '') ? Number(moment.timeLabel!.replace(/[~%]/g, '')) / 100 : NaN),

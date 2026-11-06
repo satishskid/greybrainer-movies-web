@@ -4,7 +4,8 @@ import { getAllArticles } from "@/lib/articles";
 import { absoluteUrl } from "@/lib/site";
 import { ReviewsCatalog } from "@/components/ReviewsCatalog";
 
-export const revalidate = 900;
+// ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "Cinematic Intelligence & Deep Reviews | Greybrainer Movies",

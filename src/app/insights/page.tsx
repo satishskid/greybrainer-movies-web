@@ -6,7 +6,8 @@ import { absoluteUrl } from "@/lib/site";
 import type { SiteArticle } from "@/lib/articleTypes";
 import { ExecutiveResearchDesk } from "@/components/ExecutiveResearchDesk";
 
-export const revalidate = 900;
+// ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "Trend Intelligence & Craftsman Index | Greybrainer Movies",

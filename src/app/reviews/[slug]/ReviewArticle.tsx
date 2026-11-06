@@ -1,11 +1,5 @@
-"use client";
-
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { Clock, User, ArrowLeft, Share2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { SiteArticle } from "@/lib/articleTypes";
-import { publicAuthorName } from "@/lib/site";
 import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
 import { CraftmaticsReport } from "@/components/CraftmaticsReport";
 import { ImageCredits } from "@/components/ImageCredits";
@@ -15,275 +9,127 @@ interface ReviewArticleProps {
   relatedArticles?: SiteArticle[];
 }
 
+const reviewed = (article: SiteArticle) =>
+  (article.craftmatics ?? []).filter(c => c.status === "reviewed" && typeof c.score === "number" && !!c.evidence && !!c.improvement);
+
 export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticleProps) {
-  const showBoth = article.editorial && article.content && article.editorial !== article.content;
-  const displayContent = showBoth 
-    ? `${article.editorial}\n\n---\n\n## Detailed Research Analysis\n\n${article.content}`
-    : (article.editorial || article.content || "");
-  const publishDate = article.publishedAt ? new Date(article.publishedAt) : new Date();
-  const authorName = publicAuthorName(article.createdBy);
-  const structuredHighlights = [
-    article.verdict,
-    article.whoShouldWatch,
-    article.morphokineticsTeaser,
-    article.producerInsight,
-  ].some(Boolean);
-  const layerScores = [
-    { label: "Story/Script", value: article.storyScore },
-    { label: "Conceptualization", value: article.conceptScore },
-    { label: "Performance/Execution", value: article.executionScore },
-    { label: "Overall", value: article.overallScore },
-  ].filter((score) => score.value);
+  const finding = article.searchHeadline || article.verdict || article.excerpt;
+  const published = article.status === "published" && article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
+    : null;
+  const revisions = reviewed(article);
+  const layers = article.layers ?? [];
 
   return (
-    <article className="min-h-screen bg-slate-900">
-      {/* Hero */}
-      <div className="relative h-[60vh] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/50 to-slate-900/20 z-10" />
-        {article.coverImageUrl ? (
-          <img
-            src={article.coverImageUrl}
-            alt={article.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-slate-800 to-indigo-900/40" />
-        )}
-
-        <div className="relative z-20 h-full flex flex-col justify-end max-w-4xl mx-auto px-8 pb-12">
-          <Link
-            href="/"
-            className="text-slate-400 hover:text-white transition mb-6 inline-flex items-center w-fit"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Link>
-          <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider w-fit mb-4">
-            {article.categoryLabel}
-          </span>
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
-            {article.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-slate-300 text-sm">
-            <span className="flex items-center">
-              <User className="w-4 h-4 mr-2" />
-              {authorName}
-            </span>
-            <span className="flex items-center">
-              <Clock className="w-4 h-4 mr-2" />
-              {publishDate.toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
-            <button
-              onClick={async () => {
-                if (navigator.share) {
-                  await navigator.share({
-                    title: article.title,
-                    url: window.location.href,
-                  });
-                  return;
-                }
-
-                await navigator.clipboard.writeText(window.location.href);
-              }}
-              className="flex items-center hover:text-white transition"
-            >
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
-            </button>
-            {article.sourceUrl && (
-              <a
-                href={article.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center hover:text-white transition"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Source
-              </a>
-            )}
+    <article className="min-h-screen bg-slate-950 pb-20 pt-24 text-slate-300">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6">
+        {/* 1. Film identity and the finding */}
+        <header className="grid gap-6 border-b border-slate-800 pb-8 sm:grid-cols-[160px_1fr] sm:gap-8">
+          {article.posterImageUrl && (
+            <img src={article.posterImageUrl} alt={`${article.title} poster`} width={160} height={240}
+              className="hidden aspect-[2/3] w-40 rounded object-cover sm:block" />
+          )}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">
+              <Link href="/reviews" className="hover:text-white">Research</Link>
+              {" · "}{article.categoryLabel}{article.year ? ` · ${article.year}` : ""}
+            </p>
+            <h1 className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl">{article.title}</h1>
+            {finding && <p className="mt-4 text-lg leading-8 text-slate-200">{finding}</p>}
+            {article.cast && <p className="mt-4 text-sm text-slate-400"><span className="text-slate-500">Featuring </span>{article.cast}</p>}
+            <p className="mt-2 text-xs text-slate-500">
+              {published ? `Published ${published}` : "Saved for publication; not yet verified live."}
+            </p>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Article Body */}
-      <div className="max-w-4xl mx-auto px-8 py-12">
-        {article.source === 'cloudflare' && <aside aria-label="Research limitations" className="mb-8 border-l-2 border-amber-400 pl-4 text-sm leading-relaxed text-slate-300">
-          AI-assisted research synthesis. Scores, timings and the waveform are model interpretations, not measured viewer telemetry. Check film-level claims and suggested edits against the film before making production decisions.
-        </aside>}
-        {structuredHighlights && (
-          <section className="mb-12 border border-slate-800 bg-slate-900/80 rounded-lg overflow-hidden">
-            {article.searchHeadline && article.searchHeadline !== article.title && (
-              <div className="border-b border-slate-800 px-6 py-5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-red-400">
-                  Search Headline
-                </span>
-                <h2 className="mt-2 text-2xl font-bold text-white">{article.searchHeadline}</h2>
-              </div>
-            )}
+        <aside aria-label="Research limitations" className="mt-6 border-l-2 border-amber-400 pl-4 text-sm leading-6 text-slate-300">
+          AI-assisted research, reviewed by an editor before publication. Scores, timings and the waveform are interpretations of the film and its sources,
+          not measured audience data. Check claims and suggested edits against the film before making production decisions.
+        </aside>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-              {article.verdict && (
-                <div className="border-b md:border-r border-slate-800 p-6">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-red-400">
-                    50-Word Verdict
-                  </h2>
-                  <p className="mt-3 text-slate-200 leading-7">{article.verdict}</p>
+        {/* 2. Three-layer assessment */}
+        {layers.length > 0 && (
+          <section aria-labelledby="layers-heading" className="mt-10">
+            <h2 id="layers-heading" className="text-2xl font-bold text-white">Three-layer assessment</h2>
+            <p className="mt-2 text-sm text-slate-400">Research scores out of 10 from the analysis below{article.overallScore ? `; overall ${article.overallScore}/10` : ""}.</p>
+            <div className="mt-5 grid gap-5 sm:grid-cols-3">
+              {layers.map(layer => (
+                <div key={layer.label} className="border-t border-slate-700 pt-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="font-semibold text-white">{layer.label}</h3>
+                    <span className="text-xl font-bold text-teal-300">{layer.score}<span className="text-sm text-slate-500">/10</span></span>
+                  </div>
+                  <div className="mt-3 h-2 bg-slate-800" role="img" aria-label={`${layer.label}: ${layer.score} out of 10`}>
+                    <div className="h-full bg-teal-400" style={{ width: `${layer.score * 10}%` }} />
+                  </div>
+                  {layer.description && <p className="mt-3 text-sm leading-6 text-slate-400">{layer.description}</p>}
                 </div>
-              )}
-
-              {article.whoShouldWatch && (
-                <div className="border-b border-slate-800 p-6">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-indigo-300">
-                    Who Should Watch
-                  </h2>
-                  <p className="mt-3 text-slate-200 leading-7">{article.whoShouldWatch}</p>
-                </div>
-              )}
+              ))}
             </div>
-
-            {layerScores.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 border-b border-slate-800">
-                {layerScores.map((score) => (
-                  <div key={score.label} className="p-5 border-r border-slate-800 last:border-r-0">
-                    <div className="text-xs uppercase tracking-wider text-slate-500">{score.label}</div>
-                    <div className="mt-2 text-2xl font-bold text-white">{score.value}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {article.producerInsight && (
-                  <div className="p-6">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-300">
-                      Producer / Director Lens
-                    </h2>
-                    <p className="mt-3 text-slate-300 leading-7">{article.producerInsight}</p>
-                  </div>
-            )}
           </section>
         )}
 
+        {/* 3. Morphokinetics */}
+        <MorphokineticsWaveform movieTitle={article.title} teaserText={article.morphokineticsTeaser} moments={article.engagementMoments} />
+
+        {/* 4. Craftmatics */}
         <CraftmaticsReport criteria={article.craftmatics} />
-        <MorphokineticsWaveform
-          movieTitle={article.title}
-          teaserText={article.morphokineticsTeaser}
-          moments={article.engagementMoments}
-        />
 
-        {article.diagnosticImages.length > 0 && (
-          <section className="mb-12">
-            <div className="mb-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-teal-300">
-                Greybrainer Diagnostic Visuals
-              </span>
-              <h2 className="mt-2 text-2xl font-bold text-white">
-                Three-layer and Morphokinetics read
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {article.diagnosticImages.map((image) => (
-                <figure
-                  key={image.url}
-                  className="rounded-lg border border-slate-800 bg-slate-950/60 p-4"
-                >
-                  <img
-                    src={image.url}
-                    alt={`${article.title} ${image.label}`}
-                    className="w-full rounded-md object-contain"
-                  />
-                  <figcaption className="mt-3 text-sm text-slate-400">{image.label}</figcaption>
-                </figure>
+        {/* 5. Revisions and tradeoffs */}
+        <section aria-labelledby="revisions-heading" className="mt-10">
+          <h2 id="revisions-heading" className="text-2xl font-bold text-white">Revisions to test</h2>
+          {revisions.length ? (
+            <ol className="mt-5 space-y-5">
+              {revisions.map(c => (
+                <li key={c.id} className="border-l-2 border-amber-400 pl-4">
+                  <p className="text-xs uppercase tracking-wider text-slate-500">{c.label} · {c.department}</p>
+                  <p className="mt-1 leading-7 text-slate-200">{c.improvement}</p>
+                  {c.tradeOff && <p className="mt-1 text-sm text-slate-400"><strong className="text-slate-300">Trade-off: </strong>{c.tradeOff}</p>}
+                  {c.preserve && <p className="mt-1 text-sm text-slate-400"><strong className="text-slate-300">Preserve: </strong>{c.preserve}</p>}
+                </li>
               ))}
-            </div>
-          </section>
-        )}
+            </ol>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              No editor-reviewed revisions yet. The full research below includes the analysis&apos;s own suggested improvements; those have not been editorially approved.
+            </p>
+          )}
+        </section>
 
-        {article.inlineImageUrls.length > 0 && (
-          <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {article.inlineImageUrls.slice(0, 4).map((imageUrl, index) => (
-              <img
-                key={imageUrl}
-                src={imageUrl}
-                alt={`${article.title} visual ${index + 1}`}
-                className="w-full rounded-lg border border-slate-800 object-cover"
-              />
-            ))}
-          </div>
-        )}
-
-        <div className="prose prose-invert prose-lg max-w-none
-          prose-headings:text-white prose-headings:font-bold
-          prose-h1:text-3xl prose-h1:mt-12 prose-h1:mb-4
-          prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-red-400
-          prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-slate-200
-          prose-p:text-slate-300 prose-p:leading-relaxed
-          prose-strong:text-white
-          prose-a:text-red-400 prose-a:no-underline hover:prose-a:underline
-          prose-ul:text-slate-300
-          prose-ol:text-slate-300
-          prose-blockquote:border-red-500 prose-blockquote:text-slate-400
-          prose-hr:border-slate-700
-          prose-code:text-red-300 prose-code:bg-slate-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-        ">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ h1: ({ children }) => <h2>{children}</h2> }}>{displayContent}</ReactMarkdown>
-        </div>
-
-        {article.faqs.length > 0 && (
-          <section className="mt-16 border-t border-slate-800 pt-10">
-            <h2 className="text-2xl font-bold text-white mb-6">Reader Questions</h2>
-            <div className="space-y-4">
-              {article.faqs.map((faq) => (
-                <div key={faq.question} className="rounded-lg border border-slate-800 bg-slate-900/70 p-5">
-                  <h3 className="text-lg font-semibold text-white">{faq.question}</h3>
-                  <p className="mt-2 text-slate-300 leading-7">{faq.answer}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* 6. Full research */}
+        <section aria-labelledby="research-heading" className="mt-12 border-t border-slate-800 pt-10">
+          <h2 id="research-heading" className="text-2xl font-bold text-white">Full research</h2>
+          {/* Backend-escaped HTML; headings shift down one level so the page keeps one h1. Text is unchanged, which the receipt check relies on. */}
+          <div className="prose prose-invert mt-6 max-w-none prose-headings:text-white prose-h2:text-xl prose-h3:text-lg prose-p:leading-relaxed prose-p:text-slate-300 prose-a:text-teal-300 prose-li:text-slate-300 prose-strong:text-white"
+            dangerouslySetInnerHTML={{ __html: (article.contentHtml ?? "").replace(/<(\/?)h([1-5])>/g, (_, close, level) => `<${close}h${Number(level) + 1}>`) }} />
+        </section>
 
         {relatedArticles.length > 0 && (
-          <section className="mt-16 border-t border-slate-800 pt-10">
-            <h2 className="text-2xl font-bold text-white mb-6">Related Greybrainer Reads</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {relatedArticles.map((related) => (
-                <Link
-                  key={related.slug}
-                  href={`/reviews/${related.slug}`}
-                  className="rounded-lg border border-slate-800 bg-slate-900/70 p-5 hover:border-red-500/60 transition"
-                >
-                  <span className="text-xs uppercase tracking-wider text-slate-500">
-                    {related.categoryLabel}
-                  </span>
-                  <h3 className="mt-2 text-base font-semibold text-white line-clamp-3">{related.title}</h3>
-                </Link>
+          <section aria-labelledby="related-heading" className="mt-14 border-t border-slate-800 pt-8">
+            <h2 id="related-heading" className="text-xl font-bold text-white">Related research</h2>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-3">
+              {relatedArticles.map(related => (
+                <li key={related.slug}>
+                  <Link href={`/reviews/${related.slug}`} className="block border-t border-slate-700 pt-3 text-sm font-semibold text-white hover:text-teal-300">{related.title}</Link>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
         )}
 
-        <ImageCredits attribution={article.imageAttribution} imageUrl={article.coverImageUrl} />
+        <ImageCredits attribution={article.imageAttribution} imageUrl={article.posterImageUrl || article.coverImageUrl} />
 
-        {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-slate-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-xs text-slate-500 uppercase tracking-wider">Powered by</span>
-              <p className="text-lg font-bold text-red-500">GREYBRAINER</p>
-              <p className="text-sm text-slate-400 mt-1">AI-Powered Cinematic Intelligence</p>
-            </div>
-            <Link
-              href="/reviews"
-              className="text-slate-400 hover:text-white transition text-sm"
-            >
-              ← More Reviews
-            </Link>
-          </div>
-        </div>
+        {/* 7. Enquiry */}
+        <section aria-labelledby="enquiry-heading" className="mt-14 border border-slate-700 p-6">
+          <h2 id="enquiry-heading" className="text-xl font-bold text-white">Working on a film?</h2>
+          <p className="mt-2 leading-7 text-slate-300">
+            The same method can be applied to a script or rough cut before release, under NDA, with findings for the writer, director and editor.
+          </p>
+          <Link href="/#studio-diagnostic" className="mt-4 inline-block bg-teal-400 px-4 py-2 font-semibold text-slate-950 hover:bg-teal-300">
+            Request a confidential pre-production analysis
+          </Link>
+        </section>
       </div>
     </article>
   );

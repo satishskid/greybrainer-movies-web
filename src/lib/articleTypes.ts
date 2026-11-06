@@ -10,7 +10,18 @@ export interface ArticleDiagnosticImage {
   url: string;
 }
 
+export interface ResearchLayer {
+  label: "Story / Script" | "Direction / Orchestration" | "Performance / Execution";
+  score: number;
+  description?: string;
+}
+
 export interface SiteArticle {
+  layers?: ResearchLayer[];
+  contentHtml?: string;
+  cast?: string;
+  year?: string;
+  posterImageUrl?: string;
   craftmatics?: CraftCriterionResult[];
   engagementMoments?: EngagementMoment[];
   id: string;

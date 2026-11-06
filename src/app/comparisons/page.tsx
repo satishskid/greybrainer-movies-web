@@ -5,7 +5,8 @@ import { getAllArticles } from "@/lib/articles";
 import { absoluteUrl } from "@/lib/site";
 import { DualMorphokineticsShowdown } from "@/components/DualMorphokineticsShowdown";
 
-export const revalidate = 900;
+// ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "Comparative Cinematic Intelligence | Greybrainer Movies",

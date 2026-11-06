@@ -12,7 +12,7 @@
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
     "start:vinext": "wrangler dev --config dist/server/wrangler.json",
-    "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json",
+    "deploy:preview": "NEXT_PUBLIC_SITE_URL=https://greybrainer-storefront-preview.satish-9f4.workers.dev vinext-cloudflare deploy",
     "build:preview": "NEXT_PUBLIC_SITE_URL=https://greybrainer-storefront-preview.satish-9f4.workers.dev vite build"
   },
   "dependencies": {
@@ -24,9 +24,7 @@
     "next": "16.2.6",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-markdown": "^10.1.0",
     "react-server-dom-webpack": "^19.3.1",
-    "remark-gfm": "^4.0.1",
     "sharp": "^0.34.5",
     "vinext": "^1.4.3"
   },

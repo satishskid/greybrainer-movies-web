@@ -45,15 +45,22 @@ test('custom image attribution remains visible without claiming TMDB provenance'
 test('public article has one main heading and keeps login email private', () => {
   const article: SiteArticle = {
     id: 'fixture', title: 'Fixture review', slug: 'fixture', kind: 'review', categoryLabel: 'Review',
-    content: '# Saved report heading\n\nSource-bound report.', editorial: null, excerpt: 'Report',
+    content: '# Saved report heading\n\n## Section\n\nSource-bound report.', editorial: null, excerpt: 'Report',
+    contentHtml: '<h1>Saved report heading</h1><h2>Section</h2><p>Source-bound report.</p>',
     createdBy: 'writer@gmail.com', publishedAt: '2026-10-11T00:00:00Z', publishedAtMs: 0,
     source: 'cloudflare', status: 'published', tags: [], type: 'review', faqs: [],
     relatedSlugs: [], inlineImageUrls: [], diagnosticImages: [],
+    layers: [{ label: 'Story / Script', score: 5.5 }, { label: 'Direction / Orchestration', score: 5.5 }, { label: 'Performance / Execution', score: 6 }],
   };
   const html = renderToStaticMarkup(<ReviewArticle article={article} />);
   assert.equal((html.match(/<h1\b/g) || []).length, 1);
-  assert.ok(html.includes('<h2>Saved report heading</h2>'));
+  assert.ok(html.includes('<h2>Saved report heading</h2>') && html.includes('<h3>Section</h3>'), 'report headings shift down one level, text intact');
   assert.ok(!html.includes('writer@gmail.com'));
-  assert.ok(html.includes('not measured viewer telemetry'));
-  assert.ok(html.includes('flex-wrap'));
+  assert.ok(html.includes('not measured audience data'));
+  assert.ok(html.includes('Direction / Orchestration') && html.includes('Published 11 October 2026'));
+  assert.ok(html.indexOf('Three-layer assessment') < html.indexOf('Morphokinetics') && html.indexOf('Morphokinetics') < html.indexOf('Craftmatics') && html.indexOf('Craftmatics') < html.indexOf('Full research'));
+  assert.ok(html.includes('No editor-reviewed revisions yet'));
+
+  const pending = renderToStaticMarkup(<ReviewArticle article={{ ...article, status: 'pending_verification' }} />);
+  assert.ok(pending.includes('not yet verified live') && !pending.includes('Published 11 October'));
 });

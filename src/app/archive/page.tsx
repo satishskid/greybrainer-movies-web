@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Archive, ArrowLeft, ExternalLink, Film } from "lucide-react";
 import { getAllArticles } from "@/lib/articles";
 
-export const revalidate = 900;
+// ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: "GreyBrain Lens Archive (2025–2026) | Historical Reviews",

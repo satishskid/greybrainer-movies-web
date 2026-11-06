@@ -10,6 +10,8 @@ export default defineConfig({
         name: "rsc",
         childEnvironments: ["ssr"],
       },
+      // Local design review only: STOREFRONT_FIXTURE=<wrangler config of a stand-in "greybrainer-author-preview">.
+      auxiliaryWorkers: process.env.STOREFRONT_FIXTURE ? [{ configPath: process.env.STOREFRONT_FIXTURE }] : undefined,
     }),
   ],
 });
