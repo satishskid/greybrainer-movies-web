@@ -186,7 +186,10 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
     entry.overallScore !== null && entry.overallScore !== undefined
       ? String(entry.overallScore)
       : undefined;
-  const excerpt = entry.dek || entry.summary || makeExcerpt(content);
+  // The engine's template dek ("Explore X through story, direction and performance...") says nothing; use the report's own opening.
+  const templateDek = (text?: string | null) => !text || /^explore\b.*\bthrough story, direction/i.test(text.trim());
+  const opening = content.split(/\n{2,}/).map(block => block.trim()).find(block => block.length > 120 && !/^(#|\*\*[^*]+:\*\*$|[-*] )/.test(block));
+  const excerpt = (!templateDek(entry.dek) && entry.dek) || (!templateDek(entry.summary) && entry.summary) || makeExcerpt(opening ?? content, 320);
   const coverImageUrl = [entry.heroImageUrl, entry.posterImageUrl, entry.thumbnailImageUrl].find(url => url?.startsWith("https://")) || undefined;
 
   let morphokineticsTeaser: string | undefined;
