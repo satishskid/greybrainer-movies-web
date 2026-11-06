@@ -48,3 +48,6 @@ next-env.d.ts
 .video-build
 test-article.ts
 test-voices.js
+/dist/
+.vinext/
+.wrangler/

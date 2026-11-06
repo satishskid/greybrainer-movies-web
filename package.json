@@ -8,26 +8,36 @@
     "start": "next start",
     "archive:import": "node scripts/import-medium-archive.mjs",
     "generate-video": "tsx scripts/generate-video.ts",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:vinext": "vite dev --port 3001",
+    "build:vinext": "vite build",
+    "start:vinext": "wrangler dev --config dist/server/wrangler.json",
+    "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json"
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@vinext/cloudflare": "^1.3.3",
     "date-fns": "^4.1.0",
     "firebase": "^12.13.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
+    "react-server-dom-webpack": "^19.3.1",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.34.5"
+    "sharp": "^0.34.5",
+    "vinext": "^1.4.3"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.67.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.2.1",
+    "@vitejs/plugin-rsc": "^0.5.39",
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
@@ -35,6 +45,9 @@
     "hyperframes": "^0.6.81",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
-    "typescript": "^5"
-  }
+    "typescript": "^5",
+    "vite": "^8.3.6",
+    "wrangler": "^4.158.0"
+  },
+  "type": "module"
 }
