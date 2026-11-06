@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 
 export function Navigation() {
   return (
-    <nav className="fixed top-0 w-full z-50 bg-gradient-to-b from-slate-900/90 to-transparent transition-all duration-300 px-3 sm:px-8 py-4 flex items-center justify-between gap-2">
+    <nav className="fixed top-0 w-full z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur px-3 sm:px-8 py-3 flex items-center justify-between gap-2">
       <div className="flex items-center gap-8">
         <Link href="/" className="text-lg sm:text-2xl font-bold text-red-600">
           GREYBRAINER
