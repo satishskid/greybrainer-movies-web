@@ -43,9 +43,11 @@ test('a template dek is replaced by the report\'s own opening paragraph', async 
   const opening = 'Vinod Kapri\'s Pyre is a profoundly affecting Hindi drama about an elderly couple waiting decades for their son, told with patience and unusual authenticity.';
   const entry = { slug: 'pyre-2026-review', title: 'Pyre (2026) Review - Greybrainer Craft Analysis', canonicalUrl: `${SITE_URL}/reviews/pyre-2026-review`,
     dek: 'Explore Pyre (2026) through story, direction and performance, with evidence-linked craft analysis.',
+    summaryHook: 'Explore Pyre (2026) through story, direction and performance, with evidence-linked craft analysis.',
     blogMarkdown: `# Pyre (2026): Greybrainer Craft Analysis\n\n## A Meditative Elegy\n\n${opening}\n\n` + 'More research. '.repeat(200) };
   const fetcher = async () => new Response(JSON.stringify({ entries: [entry] }));
   const article = await getArticleBySlug('pyre-2026-review', fetcher);
   assert.equal(article?.title, 'Pyre (2026)');
   assert.ok(article?.excerpt.startsWith('Vinod Kapri'), article?.excerpt);
+  assert.equal(article?.searchHeadline, undefined);
 });
