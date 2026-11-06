@@ -17,7 +17,7 @@ test("listings read only the public manifest and show only verified-live article
   const seen: string[] = [];
   const articles = await getAllArticles(50, fetcher([entry("live", "published"), entry("unverified", "pending_verification"), entry("elsewhere", "published", "https://greybrainer-dev.pages.dev/reviews/elsewhere")], seen));
   assert.deepEqual(articles.map(a => a.slug), ["live"]);
-  assert.deepEqual(seen, ["/api/public/lens/manifest?limit=50"]);
+  assert.deepEqual(seen, [`/api/public/lens/manifest?limit=50&origin=${encodeURIComponent(SITE_URL)}`]);
   assert.equal(articles[0].coverImageUrl, undefined, "no stock-photo cover is invented");
 });
 

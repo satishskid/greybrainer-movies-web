@@ -1,5 +1,6 @@
 import type { ArticleKind, SiteArticle, CraftCriterionResult, ResearchLayer } from "@/lib/articleTypes";
 import { isPublicWebsiteEntry, publicApi } from "@/lib/publication-feed";
+import { SITE_URL } from "@/lib/site";
 
 const DEFAULT_ARCHIVE_LIMIT = 200;
 
@@ -258,7 +259,7 @@ type Fetcher = (path: string) => Promise<Response>;
 
 async function manifest(query: string, fetcher: Fetcher): Promise<SiteArticle[]> {
   try {
-    const response = await fetcher(`/api/public/lens/manifest?${query}`);
+    const response = await fetcher(`/api/public/lens/manifest?${query}&origin=${encodeURIComponent(SITE_URL)}`);
     if (!response.ok) {
       console.warn(`Public manifest returned ${response.status}`);
       return [];

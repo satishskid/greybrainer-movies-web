@@ -21,6 +21,10 @@ a workers.dev URL with the production indexing configuration.
 Publication manifests preserve canonical-host filtering. Of the imported 43 live
 manifest entries, only one currently uses the accepted public host; old-domain
 records are not silently made visible by deployment.
+The manifest request includes this site's `origin`, so the backend excludes
+other-domain metadata before downloading R2 report bodies. The existing client
+canonical-host check remains a second filter. A bound production homepage probe
+improved from 11,651 ms to 1,266 ms with identical rendered content.
 
 Uploaded raster images use `/api/assets/<encoded key>`. This route accepts only
 `draft-assets/<draft>/<filename>` with raster-image extensions and MIME types;
