@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     vinext(),
     cloudflare({
+      configPath: process.env.STOREFRONT_PRODUCTION === "true" ? "wrangler.production.json" : undefined,
       viteEnvironment: {
         name: "rsc",
         childEnvironments: ["ssr"],

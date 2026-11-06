@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "greybrainer-storefront",
+  "compatibility_date": "2026-11-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "vinext/server/fetch-handler",
+  "assets": {
+    "directory": "dist/client",
+    "html_handling": "none",
+    "not_found_handling": "none",
+    "binding": "ASSETS",
+    "run_worker_first": ["/*", "!/_next/static/*", "!/*/_next/static/*"]
+  },
+  "account_id": "9f4998a66a5d7bd7a230d0222544fbe6",
+  "workers_dev": false,
+  "preview_urls": false,
+  "services": [{ "binding": "BACKEND", "service": "greybrainer-production" }],
+  "vars": { "NEXT_PUBLIC_SITE_URL": "https://movies.greybrain.in" }
+}
