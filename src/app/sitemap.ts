@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 import { getAllArticles } from "@/lib/articles";
-import { absoluteUrl } from "@/lib/site";
+import { absoluteUrl, NOINDEX } from "@/lib/site";
 
 export const revalidate = 900;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (NOINDEX) return [];
   const articles = await getAllArticles(220);
   const now = new Date();
   const staticRoutes: MetadataRoute.Sitemap = [

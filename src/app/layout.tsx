@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Navigation } from "@/components/Navigation";
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import { absoluteUrl, NOINDEX, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,11 +27,11 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   robots: {
-    index: true,
-    follow: true,
+    index: !NOINDEX,
+    follow: !NOINDEX,
     googleBot: {
-      index: true,
-      follow: true,
+      index: !NOINDEX,
+      follow: !NOINDEX,
       "max-image-preview": "large",
       "max-snippet": -1,
       "max-video-preview": -1,

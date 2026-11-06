@@ -1,34 +1,32 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { getAllArticles, getArticleBySlug } from "./articles";
+import { SITE_URL } from "./site";
 
-test("public readers use Cloudflare and preserve the archive without Firestore", async () => {
-  const originalFetch = globalThis.fetch;
-  const requests: string[] = [];
-  globalThis.fetch = async (input, init) => {
-    const url = String(input);
-    requests.push(url);
-    assert.equal(url.includes("firestore.googleapis.com"), false);
-    if (url.includes("/api/public/lens/manifest")) {
-      if (url.includes('?slug=')) assert.equal(init?.cache, 'no-store');
-      return Response.json({ entries: [{
-        slug: "verified-cloudflare-review", title: "Verified Cloudflare Review",
-        blogMarkdown: "Evidence-based research. ".repeat(120),
-        canonicalUrl: "https://movies.greybrain.in/reviews/verified-cloudflare-review",
-        imageAttribution: "Images: TMDB. Permission confirmed by publisher.",
-      }] });
-    }
-    return new Response("<rss><channel></channel></rss>");
-  };
-  try {
-    const article = await getArticleBySlug("verified-cloudflare-review");
-    assert.equal(article?.source, "cloudflare");
-    assert.equal(article?.imageAttribution, "Images: TMDB. Permission confirmed by publisher.");
-    const articles = await getAllArticles(500);
-    assert.ok(articles.some((item) => item.source === "lens-archive"));
-    assert.ok(articles.some((item) => item.slug === "verified-cloudflare-review"));
-    assert.ok(requests.some((url) => url.includes("/api/public/lens/manifest")));
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+const entry = (slug: string, status: string, canonicalUrl = `${SITE_URL}/reviews/${slug}`) => ({
+  slug, title: slug, blogMarkdown: "Evidence-based research. ".repeat(120), canonicalUrl,
+  tags: ["film", status, "website"], imageAttribution: "Images: TMDB.",
+});
+
+const fetcher = (entries: unknown[], seen: string[] = []) => async (path: string) => {
+  seen.push(path);
+  return Response.json({ entries });
+};
+
+test("listings read only the public manifest and show only verified-live articles", async () => {
+  const seen: string[] = [];
+  const articles = await getAllArticles(50, fetcher([entry("live", "published"), entry("unverified", "pending_verification"), entry("elsewhere", "published", "https://greybrainer-dev.pages.dev/reviews/elsewhere")], seen));
+  assert.deepEqual(articles.map(a => a.slug), ["live"]);
+  assert.deepEqual(seen, ["/api/public/lens/manifest?limit=50"]);
+  assert.equal(articles[0].coverImageUrl, undefined, "no stock-photo cover is invented");
+});
+
+test("an article awaiting verification renders by slug but is never labelled live", async () => {
+  const article = await getArticleBySlug("unverified", fetcher([entry("unverified", "pending_verification")]));
+  assert.equal(article?.status, "pending_verification");
+  assert.equal(await getArticleBySlug("missing", fetcher([])), null);
+});
+
+test("a failing backend yields no articles rather than legacy fallbacks", async () => {
+  assert.deepEqual(await getAllArticles(10, async () => new Response("down", { status: 503 })), []);
 });

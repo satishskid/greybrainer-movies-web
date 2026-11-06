@@ -5,6 +5,9 @@ export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || "https://movies.greybrain.in"
 ).replace(/\/$/, "");
 
+/** Fail closed: anything other than the production domain (previews, misconfiguration) is never indexed. */
+export const NOINDEX = SITE_URL !== "https://movies.greybrain.in";
+
 export const SITE_DESCRIPTION =
   "Comprehensive cinematic research, deep reviews, and morphokinetic breakdowns powered by the Greybrainer methodology.";
 

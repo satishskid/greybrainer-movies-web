@@ -16,5 +16,17 @@
       "!/_next/static/*",
       "!/*/_next/static/*"
     ]
+  },
+  "account_id": "9f4998a66a5d7bd7a230d0222544fbe6",
+  "workers_dev": true,
+  "preview_urls": false,
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "greybrainer-author-preview"
+    }
+  ],
+  "vars": {
+    "NEXT_PUBLIC_SITE_URL": "https://greybrainer-storefront-preview.satish-9f4.workers.dev"
   }
 }

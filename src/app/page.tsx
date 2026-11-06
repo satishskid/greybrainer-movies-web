@@ -13,16 +13,15 @@ import {
   CheckCircle2,
   Archive,
 } from "lucide-react";
-import { getModernArticles } from "@/lib/articles";
+import { getAllArticles } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
 import { MorphokineticsDemo } from "@/components/MorphokineticsDemo";
 import { StudioLeadMagnet } from "@/components/StudioLeadMagnet";
-import { IntelligenceWireNudge } from "@/components/IntelligenceWireNudge";
 
 export const revalidate = 900;
 
 export default async function Home() {
-  const articles = await getModernArticles(60);
+  const articles = await getAllArticles(60);
 
   const hero = articles[0] || null;
   const topDossiers = articles.slice(0, 6);
@@ -122,7 +121,6 @@ export default async function Home() {
       <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-12 space-y-24">
         {/* TOFU NUDGE: THE INTELLIGENCE WIRE FOLLOW BAR */}
         <section className="-mt-6">
-          <IntelligenceWireNudge />
         </section>
 
         {/* SECTION 1: ACTIVE INTELLIGENCE DOSSIERS & ESSAYS */}
@@ -342,7 +340,6 @@ export default async function Home() {
             <div>© {new Date().getFullYear()} Greybrainer. All rights reserved. Strictly proprietary methodology.</div>
             <div className="flex items-center space-x-6">
               <a href="https://engine.greybrain.in" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition">Reviewer Engine (engine.greybrain.in)</a>
-              <Link href="/hub" className="hover:text-slate-300 transition">Writer Hub</Link>
             </div>
           </div>
         </footer>

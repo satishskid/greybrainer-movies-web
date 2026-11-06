@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Archive, ArrowLeft, ExternalLink, Film } from "lucide-react";
-import { getLegacyArchiveArticles } from "@/lib/articles";
+import { getAllArticles } from "@/lib/articles";
 
 export const revalidate = 900;
 
@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function ArchivePage() {
-  const legacyArticles = await getLegacyArchiveArticles(100);
+  const legacyArticles = await getAllArticles(100);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 pt-28 pb-24 px-6 sm:px-8">
