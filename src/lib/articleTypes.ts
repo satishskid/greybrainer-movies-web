@@ -73,6 +73,8 @@ export interface CraftCriterionResult {
   department: string;
   score: number | null;
   status: string;
+  /** accepted = AI-proposed score the editor accepted; adjusted = editor changed it, with a note. */
+  decision?: 'accepted' | 'adjusted' | null;
   evidence?: string | null;
   locator?: string | null;
   mechanism?: string | null;

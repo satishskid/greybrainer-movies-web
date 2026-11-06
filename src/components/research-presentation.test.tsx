@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+const expect = (value: string) => ({ toContain: (part: string) => assert.ok(value.includes(part), part) });
 import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MorphokineticsWaveform } from './MorphokineticsWaveform';
@@ -26,6 +27,12 @@ test('unreviewed craft proposal is unscored', () => {
   const html = renderToStaticMarkup(<CraftmaticsReport criteria={[{ id: 'motivation', label: 'Character motivation', department: 'Screenplay', status: 'proposal', score: 4, evidence: 'A proposed observation', contributors: [] }]} />);
   assert.ok(html.includes('Unscored'));
   assert.ok(!html.includes('4/4'));
+});
+
+test('reviewed scores say whether the editor accepted or adjusted the AI proposal', () => {
+  const base = { id: 'motivation', label: 'Character motivation', department: 'Screenplay', status: 'reviewed', score: 3, evidence: 'Evidence quote long enough', contributors: [] };
+  expect(renderToStaticMarkup(<CraftmaticsReport criteria={[{ ...base, decision: 'accepted' }]} />)).toContain('AI-proposed, editor accepted');
+  expect(renderToStaticMarkup(<CraftmaticsReport criteria={[{ ...base, decision: 'adjusted', rationale: 'Set up too late.' }]} />)).toContain('Editor-adjusted');
 });
 
 test('TMDB film images carry a logo and a credits link even without saved attribution', () => {
