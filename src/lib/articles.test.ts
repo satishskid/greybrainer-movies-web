@@ -30,3 +30,11 @@ test("an article awaiting verification renders by slug but is never labelled liv
 test("a failing backend yields no articles rather than legacy fallbacks", async () => {
   assert.deepEqual(await getAllArticles(10, async () => new Response("down", { status: 503 })), []);
 });
+
+test('film titles drop the SEO suffix but keep the film and year', async () => {
+  const { filmTitle } = await import('./articles');
+  assert.equal(filmTitle('Pyre (2026) Review - Greybrainer Craft Analysis'), 'Pyre (2026)');
+  assert.equal(filmTitle('Haiwaan - Greybrainer Forensic Analysis'), 'Haiwaan');
+  assert.equal(filmTitle('Greybrainer Analysis: Fight Club'), 'Fight Club');
+  assert.equal(filmTitle('Spider-Man: No Way Home'), 'Spider-Man: No Way Home');
+});

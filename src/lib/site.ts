@@ -9,7 +9,7 @@ export const SITE_URL = (
 export const NOINDEX = SITE_URL !== "https://movies.greybrain.in";
 
 export const SITE_DESCRIPTION =
-  "Comprehensive cinematic research, deep reviews, and morphokinetic breakdowns powered by the Greybrainer methodology.";
+  "Film analysis for the people who make films: what works, what does not, why, and what could change. AI-assisted research, checked against sources and approved by an editor.";
 
 export function absoluteUrl(path = "/") {
   if (/^https?:\/\//i.test(path)) return path;

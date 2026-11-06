@@ -8,12 +8,9 @@ export function Navigation() {
         <Link href="/" className="text-lg sm:text-2xl font-bold text-red-600">
           GREYBRAINER
         </Link>
-        <div className="hidden xl:flex items-center space-x-6 text-sm font-medium text-slate-200">
-          <Link href="/reviews" className="hover:text-slate-400 transition">Deep Reviews</Link>
-          <Link href="/insights#trends" className="hover:text-red-400 transition">Trend Intelligence</Link>
-          <Link href="/insights#craft" className="hover:text-amber-300 transition">Craftsman Index</Link>
-          <Link href="/comparisons" className="hover:text-purple-400 transition">Comparisons</Link>
-          <Link href="/archive" className="hover:text-teal-300 transition">Historical Archive</Link>
+        <div className="hidden sm:flex items-center space-x-6 text-sm font-medium text-slate-200">
+          <Link href="/reviews" className="hover:text-white transition">Reports</Link>
+          <Link href="/#method" className="hover:text-white transition">Method</Link>
         </div>
       </div>
       
@@ -21,9 +18,9 @@ export function Navigation() {
         {/* Studio Diagnostic CTA */}
         <Link
           href="/#studio-diagnostic"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-semibold text-xs rounded-full shadow-md shadow-red-900/30 transition-all"
+          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-teal-400 text-teal-200 hover:bg-teal-400 hover:text-slate-950 font-semibold text-xs transition-all"
         >
-          <span>Studio Diagnostic</span>
+          <span>For filmmakers</span>
           <span>&rarr;</span>
         </Link>
 
@@ -33,9 +30,6 @@ export function Navigation() {
         </a>
         <a href="https://www.linkedin.com/company/greybrainer/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" title="LinkedIn">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-        </a>
-        <a href="https://medium.com/@GreyBrainer" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" title="Medium">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M13.54 12c0 3.74-3.01 6.77-6.72 6.77S.1 15.74.1 12s3.01-6.77 6.72-6.77S13.54 8.26 13.54 12zm7.37 0c0 3.52-1.51 6.38-3.38 6.38S14.15 15.52 14.15 12s1.51-6.38 3.38-6.38 3.38 2.86 3.38 6.38zm3.04 0c0 3.15-.53 5.7-1.18 5.7s-1.18-2.55-1.18-5.7.53-5.7 1.18-5.7 1.18 2.55 1.18 5.7z"/></svg>
         </a>
         <a href="https://www.facebook.com/share/1DmapQ7Hw3/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition" title="Facebook">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24h11.494v-9.294H9.692v-3.622h3.127V8.413c0-3.1 1.894-4.788 4.659-4.788 1.325 0 2.464.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.312h3.587l-.467 3.622h-3.12V24h6.116C23.407 24 24 23.407 24 22.676V1.325C24 .593 23.407 0 22.675 0z"/></svg>

@@ -1,365 +1,141 @@
 import Link from "next/link";
-import {
-  Film,
-  TrendingUp,
-  BookOpen,
-  Layers,
-  Sparkles,
-  ShieldCheck,
-  Activity,
-  ChevronRight,
-  BarChart3,
-  Flame,
-  CheckCircle2,
-  Archive,
-} from "lucide-react";
 import { getAllArticles } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
-import { MorphokineticsDemo } from "@/components/MorphokineticsDemo";
-import { StudioLeadMagnet } from "@/components/StudioLeadMagnet";
+import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
+import { StudioEnquiry } from "@/components/StudioEnquiry";
 
 // ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+const reviewedScores = (article: SiteArticle) =>
+  (article.craftmatics ?? []).filter(c => c.status === "reviewed" && typeof c.score === "number");
+
+// The report that best shows the method: newest review with editor-reviewed Craftmatics, else the newest article.
+const pickFeatured = (articles: SiteArticle[]) =>
+  articles.find(a => a.kind === "review" && reviewedScores(a).length > 0) ?? articles[0] ?? null;
 
 export default async function Home() {
   const articles = await getAllArticles(60);
-
-  const hero = articles[0] || null;
-  const topDossiers = articles.slice(0, 6);
-  const trendBriefings = articles.filter((a) => a.kind === "brief" || a.kind === "insight").slice(0, 4);
+  const featured = pickFeatured(articles);
+  const more = articles.filter(a => a.slug !== featured?.slug).slice(0, 6);
 
   return (
-    <main className="flex-1 pb-24 text-slate-100 selection:bg-red-600 selection:text-white">
-      {/* 1. HERO SECTION: Cinematic Diagnostic Intelligence */}
-      <div className="relative min-h-[85vh] w-full bg-slate-950 overflow-hidden flex flex-col justify-end">
-        {/* Backdrop Image with Deep Vignette */}
-        <div className="absolute inset-0 z-0">
-          {hero?.coverImageUrl ? (
-            <img
-              src={hero.coverImageUrl}
-              alt={hero.title}
-              className="w-full h-full object-cover opacity-25 filter brightness-75 scale-105 transition-transform duration-10000 hover:scale-100"
-            />
-          ) : (
-            <div
-              className="w-full h-full bg-cover bg-center opacity-25"
-              style={{
-                backgroundImage:
-                  'url("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=2000&q=80")',
-              }}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent" />
-        </div>
-
-        {/* Hero Content Container */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 pt-32 pb-20 w-full">
-          {/* Badge */}
-          <div className="flex flex-wrap items-center gap-2.5 mb-5">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-600/20 px-3.5 py-1 text-xs font-extrabold uppercase tracking-widest text-red-400 backdrop-blur-md">
-              <Activity className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-              <span>Cinematic Diagnostic Intelligence</span>
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs text-amber-400 font-semibold px-3 py-1 rounded-full bg-amber-400/10 border border-amber-400/30">
-              ★ Studio Advisory Desk
-            </span>
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.1] max-w-4xl">
-            Greybrainer Film Intelligence
-          </h1>
-
-          <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-3xl leading-relaxed font-normal">
-            Evidence-linked film analysis for writers, directors and producers: what worked, why it worked, and what could improve.
+    <main className="flex-1 bg-slate-950 pb-20 text-slate-300">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+        <section className="pt-24 pb-10">
+          <h1 className="text-3xl font-bold leading-tight text-white sm:text-5xl">Film analysis for the people who make films</h1>
+          <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-300">
+            What works in a film, what does not, why, and what a maker could change. Each report is AI-assisted research,
+            checked against sources and approved by an editor before it is published.
           </p>
+        </section>
 
-          {hero && (
-            <div className="mt-8 max-w-4xl border-y border-white/25 py-6">
-              <Link href={`/reviews/${hero.slug}`} className="text-2xl sm:text-3xl font-bold text-white hover:underline">{hero.title}</Link>
-              <p className="mt-3 max-w-3xl text-base leading-relaxed text-slate-200">{hero.verdict || hero.excerpt}</p>
-              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
-                {[
-                  { label: "Story & Screenplay", value: hero.storyScore },
-                  { label: "Direction & Orchestration", value: hero.conceptScore },
-                  { label: "Performance & Craft", value: hero.executionScore },
-                ].map(({ label, value }) => {
-                  const score = value ? Number.parseFloat(value) : NaN;
-                  const valid = Number.isFinite(score) && score >= 0 && score <= 10;
-                  return <div key={label}>
-                    <div className="flex justify-between gap-2 text-sm font-semibold"><span>{label}</span><span>{valid ? `${score}/10` : "Unscored"}</span></div>
-                    <div className="mt-2 h-2 bg-white/20"><div className="h-full bg-red-500" style={{ width: valid ? `${score * 10}%` : "0%" }} /></div>
-                  </div>;
-                })}
+        {featured ? <FeaturedReport article={featured} /> : (
+          <p className="border-t border-slate-800 py-10 text-slate-400">The first reports are being reviewed. Please check back soon.</p>
+        )}
+
+        <section id="method" aria-labelledby="method-heading" className="scroll-mt-24 border-t border-slate-800 py-12">
+          <h2 id="method-heading" className="text-2xl font-bold text-white">What a report contains</h2>
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2">
+            {[
+              ["Three-layer assessment", "Story and script, direction and orchestration, performance and execution, each scored out of 10 with the reasoning."],
+              ["Morphokinetics", "A reading of how the film's tension rises and falls across its running time, drawn from the research, not from audience measurement."],
+              ["Craftmatics", "Eight screenplay and editing criteria scored 0 to 4, each tied to a quoted piece of evidence and the department responsible."],
+              ["Revisions to test", "Concrete changes a writer, director or editor could try, with what to preserve and the trade-off involved."],
+              ["Full research and sources", "The complete analysis, with corrections the engine made and the limits of what the evidence supports."],
+            ].map(([term, detail]) => (
+              <div key={term} className="border-l-2 border-teal-500 pl-4">
+                <dt className="font-semibold text-white">{term}</dt>
+                <dd className="mt-1 text-sm leading-6 text-slate-400">{detail}</dd>
               </div>
-              <p className="mt-3 text-xs text-slate-300">Editorial assessments, not measured audience ratings. Evidence and limitations are in the full report.</p>
-              <Link href={`/reviews/${hero.slug}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white">Read the full analysis <ChevronRight className="h-4 w-4" /></Link>
+            ))}
+          </dl>
+          <p className="mt-6 max-w-3xl text-sm leading-6 text-slate-400">
+            Limits: reports interpret the film and what has been written about it. They do not measure audiences, predict box office,
+            or replace watching the film. Scores marked &ldquo;AI-proposed, editor accepted&rdquo; were proposed by the engine and accepted by an editor;
+            criteria without enough evidence are left unscored.
+          </p>
+        </section>
+
+        {more.length > 0 && (
+          <section aria-labelledby="more-heading" className="border-t border-slate-800 py-12">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 id="more-heading" className="text-2xl font-bold text-white">More reports</h2>
+              <Link href="/reviews" className="text-sm font-semibold text-teal-300 hover:text-white">All reports</Link>
             </div>
-          )}
+            <ul className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {more.map(article => (
+                <li key={article.slug}>
+                  <Link href={`/reviews/${article.slug}`} className="group block">
+                    {article.coverImageUrl && <img src={article.coverImageUrl} alt="" loading="lazy" className="aspect-[16/9] w-full object-cover opacity-80 group-hover:opacity-100" />}
+                    <h3 className="mt-3 font-semibold text-white group-hover:text-teal-300">{article.title}</h3>
+                    <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-400">{article.searchHeadline || article.verdict || article.excerpt}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-          {/* Hero Action Buttons */}
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            <a
-              href="#studio-diagnostic"
-              className="inline-flex items-center gap-2.5 rounded-xl bg-gradient-to-r from-red-600 via-red-500 to-amber-600 hover:from-red-500 hover:to-amber-500 px-7 py-3.5 text-sm sm:text-base font-bold text-white shadow-xl shadow-red-950/50 transition-all hover:scale-105"
-            >
-              <ShieldCheck className="w-5 h-5 text-white" />
-              <span>Explore Studio Advisory &amp; Specimen</span>
-            </a>
-
-            <a
-              href="#dossiers"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 px-6 py-3.5 text-sm sm:text-base font-semibold text-slate-200 transition-colors"
-            >
-              <span>Explore Intelligence Dossiers</span>
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </a>
-          </div>
+        <div className="border-t border-slate-800 py-12">
+          <StudioEnquiry />
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 mt-12 space-y-24">
-        {/* TOFU NUDGE: THE INTELLIGENCE WIRE FOLLOW BAR */}
-        <section className="-mt-6">
-        </section>
-
-        {/* SECTION 1: ACTIVE INTELLIGENCE DOSSIERS & ESSAYS */}
-        <section id="dossiers" className="scroll-mt-24">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-red-400 flex items-center gap-2">
-                <BookOpen className="w-4 h-4" />
-                <span>Executive Intelligence</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-1">
-                Active Diagnostic Dossiers &amp; Industry Briefings
-              </h2>
-              <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-                Film critiques, industry briefings, and evidence-linked craft analysis.
-              </p>
-            </div>
-            <Link
-              href="/reviews"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-red-400 hover:text-red-300 transition-colors self-start sm:self-auto"
-            >
-              <span>View Full Intelligence Feed</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topDossiers.map((article) => (
-              <Link
-                key={article.id}
-                href={`/reviews/${article.slug}`}
-                className="group relative flex flex-col rounded-xl border border-slate-800 bg-slate-900/70 overflow-hidden hover:border-red-500/50 hover:bg-slate-900 transition-all duration-300 shadow-lg"
-              >
-                {/* Poster Cover */}
-                <div className="aspect-[16/10] relative overflow-hidden bg-slate-950">
-                  {article.coverImageUrl ? (
-                    <img
-                      src={article.coverImageUrl}
-                      alt={article.title}
-                      className="w-full h-full object-cover opacity-80 group-hover:scale-105 group-hover:opacity-100 transition duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-red-950/40 via-slate-900 to-slate-950" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-
-                  {/* Category Pill */}
-                  <div className="absolute top-3 left-3">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-950/85 border border-slate-700 px-2 py-0.5 text-[10px] font-bold text-amber-300 backdrop-blur-md uppercase tracking-wider">
-                      {article.categoryLabel || "Briefing"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Dossier Body */}
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                  <div>
-                    <h3 className="text-base font-bold text-white mt-1 line-clamp-2 group-hover:text-red-400 transition-colors">
-                      {article.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-3 leading-relaxed">
-                      {getExcerpt(article, 140)}
-                    </p>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="font-medium text-slate-400">{getDateString(article)}</span>
-                    <span className="text-red-400 font-semibold group-hover:translate-x-1 transition-transform inline-flex items-center gap-0.5">
-                      Open Analysis &rarr;
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* SECTION 2: PROPRIETARY MORPHOKINETICS TELEMETRY DEMO */}
-        <section id="telemetry" className="scroll-mt-24">
-          <MorphokineticsDemo />
-        </section>
-
-        {/* SECTION 3: TREND INTELLIGENCE & MACRO INDUSTRY BAROMETERS */}
-        <section id="trends" className="scroll-mt-24">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
-                <span>Macro Shifts &amp; Industry Dynamics</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-1">
-                Trend Intelligence Barometers
-              </h2>
-              <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-                Analytical studies evaluating streaming platform retention, theatrical ROI thresholds, and audience appetite changes.
-              </p>
-            </div>
-            <Link
-              href="/insights#trends"
-              className="inline-flex items-center gap-1 text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors self-start sm:self-auto"
-            >
-              <span>Explore All Trend Reports</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {trendBriefings.map((article) => (
-              <Link
-                key={article.id}
-                href={`/reviews/${article.slug}`}
-                className="group rounded-2xl border border-slate-800 bg-slate-900/80 p-6 flex flex-col justify-between hover:border-amber-500/50 transition duration-300 shadow-md"
-              >
-                <div>
-                  <div className="flex items-center justify-between text-xs text-amber-400 font-semibold mb-3">
-                    <span className="uppercase tracking-wider">Intelligence Briefing</span>
-                    <span className="text-slate-500">{getDateString(article)}</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2">
-                    {article.title}
-                  </h3>
-                  <p className="text-sm text-slate-400 mt-3 line-clamp-3 leading-relaxed">
-                    {getExcerpt(article, 180)}
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-slate-800 text-xs font-semibold text-amber-400 flex items-center gap-1">
-                  <span>Read Full Briefing</span>
-                  <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* SECTION 4: STUDIO ADVISORY DESK & CAPABILITY SHOWCASE (MOFU & BOFU) */}
-        <StudioLeadMagnet />
-
-        {/* SECTION 5: HISTORICAL LENS ARCHIVE CALLOUT */}
-        <section className="rounded-2xl border border-slate-800/80 bg-gradient-to-r from-slate-900/60 to-slate-950 p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400">
-              <Archive className="w-4 h-4 text-slate-400" />
-              <span>Historical Repository</span>
-            </div>
-            <h3 className="text-xl font-bold text-white mt-1">
-              GreyBrain Lens Archive (2025–2026)
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-              Preserved pilot reviews and early exploratory analyses conducted prior to the deployment of our 7-layer radar and Morphokinetics™ diagnostic system.
-            </p>
-          </div>
-          <Link
-            href="/archive"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 px-6 py-3 text-xs font-semibold text-slate-200 transition-colors shrink-0"
-          >
-            <span>Explore Archive</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="border-t border-slate-800/80 pt-16 pb-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-            <div className="space-y-4">
-              <Link href="/" className="text-2xl font-black text-red-600 tracking-tighter">
-                GREYBRAINER
-              </Link>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Empirical cinematic intelligence and predictive screenplay diagnostics for film studios, OTT commissioners, and directors.
-              </p>
-              <div className="text-xs text-slate-500">
-                Operating between Mumbai, Hyderabad, Los Angeles &amp; London.
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">
-                Intelligence Desk
-              </h4>
-              <nav className="space-y-2.5 text-xs text-slate-400">
-                <Link href="/reviews" className="block hover:text-white transition">Active Film Dossiers</Link>
-                <Link href="/insights#trends" className="block hover:text-white transition">Trend Intelligence</Link>
-                <Link href="/insights#craft" className="block hover:text-white transition">Craftsman Benchmarks</Link>
-                <Link href="/comparisons" className="block hover:text-white transition">Comparative Head-to-Heads</Link>
-                <Link href="/archive" className="block hover:text-amber-400 transition">Historical Archive (2025–2026)</Link>
-              </nav>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">
-                Studio Advisory
-              </h4>
-              <nav className="space-y-2.5 text-xs text-slate-400">
-                <a href="#studio-diagnostic" className="block hover:text-white transition">Pre-Greenlight Script Stress-Test</a>
-                <a href="#studio-diagnostic" className="block hover:text-white transition">Rough Cut Screening Audit</a>
-                <a href="#studio-diagnostic" className="block hover:text-white transition">OTT Acquisition Due Diligence</a>
-                <a href="mailto:dr.satish@greybrain.ai?subject=Studio%20Inquiry" className="block hover:text-white transition">Bilateral NDA Direct Desk</a>
-              </nav>
-            </div>
-
-            <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">
-                Verified Social Handles
-              </h4>
-              <nav className="space-y-2.5 text-xs text-slate-400">
-                <a href="https://x.com/Greybrainlens" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">X (Twitter): @Greybrainlens</a>
-                <a href="https://www.linkedin.com/company/greybrainer/" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">LinkedIn: @greybrainer</a>
-                <a href="https://medium.com/@GreyBrainer" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Medium: @GreyBrainer</a>
-                <a href="https://www.instagram.com/greybrainlens" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Instagram: @greybrainlens</a>
-                <a href="https://www.facebook.com/share/1DmapQ7Hw3/" target="_blank" rel="noopener noreferrer" className="block hover:text-white transition">Facebook: GreyBrainer</a>
-              </nav>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-            <div>© {new Date().getFullYear()} Greybrainer. All rights reserved. Strictly proprietary methodology.</div>
-            <div className="flex items-center space-x-6">
-              <a href="https://engine.greybrain.in" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition">Reviewer Engine (engine.greybrain.in)</a>
-            </div>
-          </div>
+        <footer className="flex flex-col gap-3 border-t border-slate-800 pt-8 text-sm text-slate-500 sm:flex-row sm:justify-between">
+          <span>© {new Date().getFullYear()} Greybrainer</span>
+          <nav className="flex flex-wrap gap-5">
+            <Link href="/reviews" className="hover:text-white">Reports</Link>
+            <Link href="/#method" className="hover:text-white">Method</Link>
+            <Link href="/credits" className="hover:text-white">Image credits</Link>
+            <a href="mailto:dr.satish@greybrain.ai" className="hover:text-white">Contact</a>
+          </nav>
         </footer>
       </div>
     </main>
   );
 }
 
-function getDateString(article: SiteArticle) {
-  if (!article.publishedAt) return "";
-  return new Date(article.publishedAt).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+function FeaturedReport({ article }: { article: SiteArticle }) {
+  const scores = reviewedScores(article);
+  const finding = article.searchHeadline || article.verdict || article.excerpt;
+  const published = article.publishedAt
+    ? new Date(article.publishedAt).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" }) : null;
+  return (
+    <section aria-labelledby="featured-heading" className="border-t border-slate-800 py-10">
+      <p className="text-xs font-semibold uppercase tracking-wider text-teal-300">Latest report{published ? ` · ${published}` : ""}</p>
+      <div className="mt-4 grid gap-6 sm:grid-cols-[180px_1fr]">
+        {article.posterImageUrl && <img src={article.posterImageUrl} alt={`${article.title} poster`} width={180} height={270} className="aspect-[2/3] w-36 object-cover sm:w-44" />}
+        <div>
+          <h2 id="featured-heading" className="text-2xl font-bold text-white sm:text-3xl">
+            <Link href={`/reviews/${article.slug}`} className="hover:text-teal-300">{article.title}</Link>
+          </h2>
+          {finding && <p className="mt-3 text-lg leading-8 text-slate-200">{finding}</p>}
+          {article.cast && <p className="mt-3 text-sm text-slate-400"><span className="text-slate-500">Featuring </span>{article.cast}</p>}
+          <Link href={`/reviews/${article.slug}`} className="mt-5 inline-block bg-teal-400 px-4 py-2 font-semibold text-slate-950 hover:bg-teal-300">Read the full report</Link>
+        </div>
+      </div>
 
-function getExcerpt(article: SiteArticle, maxLen = 160) {
-  const text = article.excerpt || article.editorial || article.content || "";
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen).trim() + "...";
+      {scores.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-semibold text-white">Craftmatics</h3>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {scores.map(c => (
+              <li key={c.id}>
+                <div className="flex justify-between gap-3 text-sm"><span className="text-slate-200">{c.label}</span><span className="text-teal-300">{c.score}/4</span></div>
+                <div className="mt-1 h-1.5 bg-slate-800"><div className="h-full bg-teal-400" style={{ width: `${c.score! * 25}%` }} /></div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-slate-500">
+            {scores.every(c => c.decision === "accepted") ? "AI-proposed, editor accepted. " : "Editor-reviewed. "}
+            Evidence for each score is in the report.
+          </p>
+        </div>
+      )}
+
+      {(article.engagementMoments?.length ?? 0) > 0 && (
+        <MorphokineticsWaveform movieTitle={article.title} teaserText={article.morphokineticsTeaser} moments={article.engagementMoments} />
+      )}
+    </section>
+  );
 }

@@ -142,8 +142,13 @@ interface CloudflareManifestEntry {
   cast?: string | null;
 }
 
+/** "Pyre (2026) Review - Greybrainer Craft Analysis" -> "Pyre (2026)": the film, not the SEO headline. */
+export function filmTitle(title: string) {
+  return title.replace(/\s*(?:review)?\s*[-\u2013\u2014:|]\s*greybrainer\b.*$/i, "").replace(/^greybrainer analysis:\s*/i, "").trim() || title;
+}
+
 function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
-  const title = entry.title || "Untitled Review";
+  const title = filmTitle(entry.title || "Untitled Review");
   const tags = Array.isArray(entry.tags)
     ? entry.tags.map(String)
     : Array.isArray(entry.keywords)
