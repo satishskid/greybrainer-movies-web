@@ -47,6 +47,10 @@ function inferKind(title: string, tags: string[], rawType?: string | null): Arti
     return "comparison";
   }
 
+  if (rawType === "review") return "review";
+  if (rawType === "brief") return "brief";
+  if (rawType === "study") return "insight";
+
   if (rawType === "research_export" || lower.startsWith("greybrainer analysis:")) {
     return "review";
   }

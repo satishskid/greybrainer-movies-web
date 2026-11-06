@@ -31,6 +31,16 @@ test("a failing backend yields no articles rather than legacy fallbacks", async 
   assert.deepEqual(await getAllArticles(10, async () => new Response("down", { status: 503 })), []);
 });
 
+test('explicit review and brief types do not fall through to craft trends', async () => {
+  const articles = await getAllArticles(50, fetcher([
+    { ...entry('mohra-1994', 'published'), contentType: 'review' },
+    { ...entry('pyre-2026', 'published'), contentType: 'review' },
+    { ...entry('daily-report', 'published'), contentType: 'brief' },
+    { ...entry('editing-study', 'published'), contentType: 'study' },
+  ]));
+  assert.deepEqual(articles.map(article => article.kind), ['review', 'review', 'brief', 'insight']);
+});
+
 test('film titles drop the SEO suffix but keep the film and year', async () => {
   const { filmTitle } = await import('./articles');
   assert.equal(filmTitle('Pyre (2026) Review - Greybrainer Craft Analysis'), 'Pyre (2026)');
