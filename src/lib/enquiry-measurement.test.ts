@@ -32,6 +32,11 @@ test("enquiries emit only an approved fixed payload after a matching receipt, on
     assert.deepEqual(fake.dataLayer, NOINDEX ? [] : [{ event: "generate_lead", lead_type: "filmmaker_enquiry" }]);
     consent = "necessary";
     assert.equal(trackConfirmedEnquiry(requestId, true, receipt), false);
+    sent.clear();
+    consent = "marketing";
+    assert.equal(trackConfirmedEnquiry(requestId, true, receipt), false);
+    consent = "both";
+    assert.equal(trackConfirmedEnquiry(requestId, true, receipt), !NOINDEX);
   } finally {
     if (original) Object.defineProperty(globalThis, "window", original);
     else Reflect.deleteProperty(globalThis, "window");
