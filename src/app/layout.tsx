@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Script from "next/script";
+import { PrivacyControls } from "@/components/PrivacyControls";
 import { Navigation } from "@/components/Navigation";
 import { absoluteUrl, NOINDEX, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -49,34 +49,10 @@ export default function RootLayout({
       lang="en"
       className="h-full antialiased bg-slate-900 text-slate-200"
     >
-      <head>
-        {/* Google Tag Manager */}
-        <Script
-          id="gtm-script"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-              })(window,document,'script','dataLayer','GTM-N8J3ZGXD');
-            `,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col">
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe
-            src="https://www.googletagmanager.com/ns.html?id=GTM-N8J3ZGXD"
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          />
-        </noscript>
         <Navigation />
         {children}
+        <PrivacyControls enabled={!NOINDEX} />
       </body>
     </html>
   );
