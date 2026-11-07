@@ -1,0 +1,9 @@
+{
+  "name": "greybrain-engine-proxy",
+  "account_id": "27f2f514327f6ec9f477357f545b58af",
+  "main": "worker/engine-redirect.ts",
+  "compatibility_date": "2026-11-06",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "engine.greybrain.in", "custom_domain": true, "zone_id": "b77a665b11ab4f0101ca186e6cbe04c8" }]
+}

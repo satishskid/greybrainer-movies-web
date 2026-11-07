@@ -18,8 +18,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please provide a valid work email." }, { status: 400 });
   }
 
-  const token = process.env.STUDIO_ENQUIRY_TOKEN;
-  const url = process.env.STUDIO_ENQUIRY_URL;
+  let token = process.env.STUDIO_ENQUIRY_TOKEN;
+  let url = process.env.STUDIO_ENQUIRY_URL;
+  let deliver: (url: string, init: RequestInit) => Promise<Response> = fetch;
+  try {
+    const { env } = await import('cloudflare:workers');
+    if (env.ENQUIRIES && env.STUDIO_ENQUIRY_TOKEN) {
+      token = env.STUDIO_ENQUIRY_TOKEN;
+      url = 'https://enquiries/enquiries';
+      deliver = (target, init) => env.ENQUIRIES!.fetch(target, init);
+    }
+  } catch { /* Non-Workers runtimes retain the existing explicit endpoint configuration. */ }
   const failure = () => NextResponse.json({ success: false, error: "Save could not be confirmed. Retry or email dr.satish@greybrain.ai directly." }, { status: 503 });
   if (!token || !url) return failure();
   const input = body as Record<string, unknown>;
@@ -28,7 +37,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid enquiry receipt key." }, { status: 400 });
   }
   try {
-    const response = await fetch(url, {
+    const response = await deliver(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "Idempotency-Key": requestId },
       body: JSON.stringify({ email: email.trim().toLowerCase(), studioName: input.studioName, serviceInterest: input.serviceInterest }),

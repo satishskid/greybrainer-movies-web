@@ -1,15 +1,35 @@
 # Greybrainer Movies Website
 
-Public movie intelligence site and Writer Hub for Greybrainer Lens content.
+Public-only Greybrainer editorial storefront. Production cutover completed on 2026-11-06.
 
 - Production: https://movies.greybrain.in
-- Writer Hub: https://movies.greybrain.in/hub
+- Studio: https://engine.greybrain.in (separate, protected Cloudflare app)
 - Repository: https://github.com/satishskid/greybrainer-movies-web
-- Framework: Next.js App Router on Netlify
-- Content database: Firebase Firestore `published_research`
-- Image storage: Cloudflare R2 through protected upload routes
+- Framework: Next.js App Router components, deployed with vinext on Cloudflare Workers
+- Content: approved publications through the production Worker's read-only public API
+- Storage: Cloudflare D1/R2 behind the separate Studio; not bound to this storefront
+- Hosting: Cloudflare, with an origin-free DNS record; no active Netlify dependency
 
-## Current Publishing Model
+## Current production instructions
+
+See [the production architecture, deployment and acceptance record](specs/CLOUDFLARE_PRODUCTION.md).
+Active branch: `claude/cloudflare-storefront`. Build the production config with
+`STOREFRONT_PRODUCTION=true`; do not use the preview deploy command for production.
+Use `npm run dev:vinext` for local Cloudflare-compatible development.
+
+The owner reviews and publishes in Studio; the public site renders the approved
+version without a rebuild. Social posting remains manual. The production Mohra
+receipt, real images, uploaded-cover route, public SEO and private-route denial
+were checked independently. Filmmaker enquiries use a separate private R2-backed
+intake Worker and confirmed receipts; there is no automatic email notification yet.
+
+## Archived Netlify-era notes
+
+The material below describes earlier Firebase/Netlify deployments and retained
+history. It is not the live architecture or current deployment procedure. In
+particular, `/hub` and the Netlify deployment commands below are not used in production.
+
+### Previous publishing model
 
 The website is the canonical publishing destination. Medium and social channels are still used manually by the content team, but the public website should receive the final article first.
 
