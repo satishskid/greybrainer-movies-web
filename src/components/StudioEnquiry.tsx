@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { trackConfirmedEnquiry } from "@/lib/enquiry-measurement";
 
 const CONTACT = "dr.satish@greybrain.ai";
 
@@ -8,24 +9,34 @@ const CONTACT = "dr.satish@greybrain.ai";
 export function StudioEnquiry() {
   const [state, setState] = useState<"idle" | "sending" | "sent" | "failed">("idle");
   const [error, setError] = useState("");
+  const pending = useRef<{ payload: string; requestId: string } | null>(null);
+  const inFlight = useRef(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (inFlight.current) return;
     const form = new FormData(event.currentTarget);
+    const payload = JSON.stringify({ email: form.get("email"), studioName: form.get("studio"), serviceInterest: form.get("material") });
+    if (!pending.current || pending.current.payload !== payload) pending.current = { payload, requestId: crypto.randomUUID() };
+    const requestId = pending.current.requestId;
+    inFlight.current = true;
     setState("sending");
     setError("");
     try {
       const response = await fetch("/api/studio-diagnostic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId: crypto.randomUUID(), email: form.get("email"), studioName: form.get("studio"), serviceInterest: form.get("material") }),
+        body: JSON.stringify({ ...JSON.parse(payload), requestId }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || body.success !== true) throw new Error(body.error || `Your enquiry could not be confirmed. Email ${CONTACT} instead.`);
+      if (!response.ok || body.success !== true || body.receiptId !== requestId) throw new Error(body.error || `Your enquiry could not be confirmed. Email ${CONTACT} instead.`);
       setState("sent");
+      trackConfirmedEnquiry(requestId, response.ok, body);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : `Email ${CONTACT} instead.`);
       setState("failed");
+    } finally {
+      inFlight.current = false;
     }
   }
 
