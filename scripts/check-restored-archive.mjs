@@ -47,4 +47,4 @@ writeFileSync(outputPath, JSON.stringify(report, null, 2));
 console.log(JSON.stringify({ entries: report.entries, archive: report.archive, missing, duplicates, pagesChecked: checked.length,
   pageFailures: report.pageFailures, imagesChecked: images.length, imageFailures: report.imageFailures.length,
   noCover: report.noCover.length, sitemapMissing, sitemapStatus: sitemapResponse.status }, null, 2));
-if (missing.length || duplicates.length || report.pageFailures.length || sitemapMissing.length || sitemapResponse.status !== 200) process.exitCode = 1;
+if (missing.length || duplicates.length || report.pageFailures.length || report.imageFailures.length || sitemapMissing.length || sitemapResponse.status !== 200) process.exitCode = 1;

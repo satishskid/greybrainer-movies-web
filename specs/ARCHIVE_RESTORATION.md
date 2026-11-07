@@ -36,6 +36,8 @@ The actual engine approval and website receipt checks are unchanged.
 - 127/127 article URLs: HTTP 200, correct canonical URL, one h1, no noindex.
 - 127/127 articles in the sitemap; no duplicate slugs or missing old listing links.
 - 117 unique cover/poster/thumbnail image URLs: successful image responses.
+- Final expanded audit: 259 unique cover and inline-image URLs, zero image failures;
+  all 127 pages rechecked after the final historical classification, zero failures.
 - Desktop 1440x1000 and mobile 390x844: 127 cards, working title search, 11
   comparison results, no horizontal overflow or uncaught page errors.
 - Sampled restored article images loaded in the browser; original body/dates and
@@ -49,6 +51,7 @@ Eleven historical reports never had a genuine saved cover. They are preserved
 without unrelated stock-image substitutes; this is an artwork gap, not a broken
 image URL. Historical factual claims and external citations have not been freshly
 fact-checked as part of archive restoration.
+The public API's existing 200-article cap remains; add pagination before reaching it.
 
 ## Deployment and evidence
 
