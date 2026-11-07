@@ -3,6 +3,12 @@
 Audit: 2026-11-07. **Goal remains incomplete: account access is required.**
 This is an observed setup audit, not proof that GA4 or Meta is receiving events.
 
+**Inventory follow-up:** [handles and tracking inventory](HANDLES_AND_TRACKING_INVENTORY.md)
+compares the old Netlify site, Cloudflare site, parent brand and Git history.
+It identifies the parent's live GA4/Ads/Meta IDs and the movie site's historical
+GA4 ID. Existing destinations must be mapped before creating or replacing assets;
+an inaccessible account is not proof that its properties do not exist.
+
 ## First-hand findings
 
 - The canonical public website returns 200 from Cloudflare.
