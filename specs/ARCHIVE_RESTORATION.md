@@ -2,6 +2,12 @@
 
 Completed 2026-11-07. Production remains https://movies.greybrain.in.
 
+**Artwork follow-up:** nine missing film/series previews now use 18 verified TMDB
+poster/backdrop files uploaded to R2, with TMDB attribution. Desktop/mobile image
+checks and all nine saved-body/canonical/image checks pass. Two non-film newsletter
+cards still need editorial artwork. Backend is now
+`987b420d-4ac5-416f-8847-6c7cf1d59f4c`; storefront deployment is unchanged.
+
 ## Results
 
 - 127 public articles: 53 reviews, 20 briefs, 43 studies/insights and 11 comparisons.
@@ -47,9 +53,9 @@ The actual engine approval and website receipt checks are unchanged.
 - Mohra's saved-content/canonical/image receipt verification remains `live`.
 - Pyre/Ramayana remain unapproved editing drafts with no public URL.
 
-Eleven historical reports never had a genuine saved cover. They are preserved
-without unrelated stock-image substitutes; this is an artwork gap, not a broken
-image URL. Historical factual claims and external citations have not been freshly
+Eleven historical reports initially had no saved cover; nine now have verified
+TMDB artwork as noted above. The two remaining newsletter cards have no unrelated
+stock/movie-image substitutes. Historical factual claims and external citations have not been freshly
 fact-checked as part of archive restoration.
 The public API's existing 200-article cap remains; add pagination before reaching it.
 
