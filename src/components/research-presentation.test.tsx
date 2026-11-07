@@ -70,4 +70,10 @@ test('public article has one main heading and keeps login email private', () => 
 
   const pending = renderToStaticMarkup(<ReviewArticle article={{ ...article, status: 'pending_verification' }} />);
   assert.ok(pending.includes('not yet verified live') && !pending.includes('Published 11 October'));
+
+  const archived = renderToStaticMarkup(<ReviewArticle article={{ ...article, historicalArchive: true }} />);
+  assert.ok(archived.includes('not been re-approved under the current editorial process'));
+  assert.ok(!archived.includes('AI-assisted research, reviewed by an editor'));
+  assert.ok(!archived.includes('id="revisions-heading"'));
+  assert.ok(!archived.includes('sm:grid-cols-[160px_1fr]'), 'without an image the title keeps the full column');
 });

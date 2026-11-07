@@ -17,6 +17,8 @@ export interface ResearchLayer {
 }
 
 export interface SiteArticle {
+  historicalArchive?: boolean;
+  originalSourceUrl?: string;
   layers?: ResearchLayer[];
   contentHtml?: string;
   cast?: string;

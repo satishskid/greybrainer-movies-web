@@ -8,10 +8,11 @@ export const dynamic = 'force-dynamic';
 export const metadata = {
   title: "GreyBrain Lens Archive (2025–2026) | Historical Reviews",
   description: "Historical early-phase reviews and pilot analyses preserved for research reference.",
+  alternates: { canonical: '/archive' },
 };
 
 export default async function ArchivePage() {
-  const legacyArticles = await getAllArticles(100);
+  const legacyArticles = (await getAllArticles(200)).filter(article => article.historicalArchive);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 pt-28 pb-24 px-6 sm:px-8">
@@ -36,7 +37,8 @@ export default async function ArchivePage() {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-400 max-w-3xl mt-3 leading-relaxed">
-            These early film reviews were compiled during our initial methodology development phase. Modern diagnostic dossiers utilizing our 7-layer radar rubric, Morphokinetics™ audience retention graphs, and NDA-backed studio audits are featured on the main desk.
+            Earlier reviews, daily briefings and film essays, preserved with their original publication dates.
+            These archive articles have not been re-approved under the current editorial process. Scores and narrative curves are research interpretations, not measured audience data.
           </p>
         </div>
 
@@ -61,7 +63,7 @@ export default async function ArchivePage() {
                   </div>
                 )}
                 <div className="absolute top-2.5 left-2.5 bg-slate-950/80 border border-slate-700 rounded px-2 py-0.5 text-[10px] font-semibold text-slate-400 backdrop-blur-sm">
-                  Legacy Pilot
+                  Archive
                 </div>
               </div>
 

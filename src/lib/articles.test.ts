@@ -17,7 +17,7 @@ test("listings read only the public manifest and show only verified-live article
   const seen: string[] = [];
   const articles = await getAllArticles(50, fetcher([entry("live", "published"), entry("unverified", "pending_verification"), entry("elsewhere", "published", "https://greybrainer-dev.pages.dev/reviews/elsewhere")], seen));
   assert.deepEqual(articles.map(a => a.slug), ["live"]);
-  assert.deepEqual(seen, [`/api/public/lens/manifest?limit=50&origin=${encodeURIComponent(SITE_URL)}`]);
+  assert.deepEqual(seen, [`/api/public/lens/manifest?limit=50&view=summary&origin=${encodeURIComponent(SITE_URL)}`]);
   assert.equal(articles[0].coverImageUrl, undefined, "no stock-photo cover is invented");
 });
 
@@ -39,6 +39,15 @@ test('explicit review and brief types do not fall through to craft trends', asyn
     { ...entry('editing-study', 'published'), contentType: 'study' },
   ]));
   assert.deepEqual(articles.map(article => article.kind), ['review', 'review', 'brief', 'insight']);
+});
+
+test('archive provenance and comparison classification survive listing normalization', async () => {
+  const [article] = await getAllArticles(50, fetcher([{ ...entry('two-films', 'published'), historicalArchive: true,
+    originalSourceUrl: 'https://medium.com/@GreyBrainer/two-films', contentType: 'comparison', blogMarkdown: '', dek: 'The original archived summary.' }]));
+  assert.equal(article.kind, 'comparison');
+  assert.equal(article.historicalArchive, true);
+  assert.equal(article.originalSourceUrl, 'https://medium.com/@GreyBrainer/two-films');
+  assert.equal(article.excerpt, 'The original archived summary.');
 });
 
 test('film titles drop the SEO suffix but keep the film and year', async () => {

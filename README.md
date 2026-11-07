@@ -6,7 +6,7 @@ Public-only Greybrainer editorial storefront. Production cutover completed on 20
 - Studio: https://engine.greybrain.in (separate, protected Cloudflare app)
 - Repository: https://github.com/satishskid/greybrainer-movies-web
 - Framework: Next.js App Router components, deployed with vinext on Cloudflare Workers
-- Content: approved publications through the production Worker's read-only public API
+- Content: approved publications and clearly labelled historical articles through the production Worker's read-only public API
 - Storage: Cloudflare D1/R2 behind the separate Studio; not bound to this storefront
 - Hosting: Cloudflare, with an origin-free DNS record; no active Netlify dependency
 
@@ -22,6 +22,17 @@ version without a rebuild. Social posting remains manual. The production Mohra
 receipt, real images, uploaded-cover route, public SEO and private-route denial
 were checked independently. Filmmaker enquiries use a separate private R2-backed
 intake Worker and confirmed receipts; there is no automatic email notification yet.
+
+## Historical archive restored (2026-11-07)
+
+The catalog now contains 127 articles. All 114 links from the former Netlify listing
+are included. The 126 historical articles retain their original publication dates;
+they are explicitly not represented as passing today's editorial review gate.
+The current approved Mohra report and its live receipt are unchanged.
+
+See [the archive verification record](specs/ARCHIVE_RESTORATION.md). Catalogs use
+version-bound publication summaries; full article pages still read the saved report.
+No Medium feed, Firebase fallback, or legacy API dependency was reintroduced.
 
 ## Archived Netlify-era notes
 

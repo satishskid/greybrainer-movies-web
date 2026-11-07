@@ -5,6 +5,11 @@ It has `ASSETS`, a read-only `BACKEND` service binding to `greybrainer-productio
 and an `ENQUIRIES` binding to a separate private enquiry intake Worker.
 It has no database, Gemini key, Firebase configuration or authoring routes.
 
+Archive restored on 2026-11-07: 127 public articles, including the former Netlify
+library. Historical publications are labelled and retain their original dates;
+they are not new editorial approvals. See [the verification record](ARCHIVE_RESTORATION.md)
+for the current deployment IDs and checks. Older version IDs below are historical.
+
 ## Live flow
 
 ```text

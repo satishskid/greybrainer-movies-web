@@ -24,7 +24,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
     <article className="min-h-screen bg-slate-950 pb-20 pt-28 sm:pt-24 text-slate-300">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
         {/* 1. Film identity and the finding */}
-        <header className="grid gap-6 border-b border-slate-800 pb-8 sm:grid-cols-[160px_1fr] sm:gap-8">
+        <header className={`grid gap-6 border-b border-slate-800 pb-8 sm:gap-8 ${article.posterImageUrl ? 'sm:grid-cols-[160px_1fr]' : ''}`}>
           {article.posterImageUrl && (
             <img src={article.posterImageUrl} alt={`${article.title} poster`} width={160} height={240}
               className="hidden aspect-[2/3] w-40 rounded object-cover sm:block" />
@@ -44,8 +44,14 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
         </header>
 
         <aside aria-label="Research limitations" className="mt-6 border-l-2 border-amber-400 pl-4 text-sm leading-6 text-slate-300">
-          AI-assisted research, reviewed by an editor before publication. Scores, timings and the waveform are interpretations of the film and its sources,
+          {article.historicalArchive
+            ? 'From the Greybrainer archive, restored with its original publication date. It has not been re-approved under the current editorial process. '
+            : 'AI-assisted research, reviewed by an editor before publication. '}
+          Scores, timings and the waveform are interpretations of the film and its sources,
           not measured audience data. Check claims and suggested edits against the film before making production decisions.
+          {article.historicalArchive && article.originalSourceUrl?.startsWith('https://medium.com/') && (
+            <> <a href={article.originalSourceUrl} rel="noopener noreferrer" className="text-teal-300 underline">Original publication</a>.</>
+          )}
         </aside>
 
         {/* 2. Three-layer assessment */}
@@ -71,13 +77,13 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
         )}
 
         {/* 3. Morphokinetics */}
-        <MorphokineticsWaveform movieTitle={article.title} teaserText={article.morphokineticsTeaser} moments={article.engagementMoments} />
+        {(!article.historicalArchive || (article.engagementMoments?.length ?? 0) > 0) && <MorphokineticsWaveform movieTitle={article.title} teaserText={article.morphokineticsTeaser} moments={article.engagementMoments} />}
 
         {/* 4. Craftmatics */}
-        <CraftmaticsReport criteria={article.craftmatics} />
+        {!article.historicalArchive && <CraftmaticsReport criteria={article.craftmatics} />}
 
         {/* 5. Revisions and tradeoffs */}
-        <section aria-labelledby="revisions-heading" className="mt-10">
+        {!article.historicalArchive && <section aria-labelledby="revisions-heading" className="mt-10">
           <h2 id="revisions-heading" className="text-2xl font-bold text-white">Revisions to test</h2>
           {revisions.length ? (
             <ol className="mt-5 space-y-5">
@@ -95,7 +101,7 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
               No editor-reviewed revisions yet. The full research below includes the analysis&apos;s own suggested improvements; those have not been editorially approved.
             </p>
           )}
-        </section>
+        </section>}
 
         {/* 6. Full research */}
         <section aria-labelledby="research-heading" className="mt-12 border-t border-slate-800 pt-10">

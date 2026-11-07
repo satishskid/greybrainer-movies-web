@@ -3,6 +3,7 @@ import { BookOpen } from "lucide-react";
 import { getAllArticles } from "@/lib/articles";
 import { absoluteUrl } from "@/lib/site";
 import { ReviewsCatalog } from "@/components/ReviewsCatalog";
+import Link from 'next/link';
 
 // ponytail: render per request so new approvals appear at once; add a cache when traffic needs it.
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,7 @@ export default async function ReviewsPage() {
           <p className="text-slate-400 text-base sm:text-lg max-w-3xl leading-relaxed">
             Forensic film critiques, narrative failure-mode telemetry, and auteur craft barometers powered by the Greybrainer Methodology.
           </p>
+          <Link href="/archive" className="mt-4 inline-block text-sm text-teal-300 underline">Browse the historical archive</Link>
         </div>
 
         <ReviewsCatalog initialArticles={articles} />

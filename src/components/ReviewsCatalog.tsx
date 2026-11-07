@@ -110,7 +110,7 @@ export function ReviewsCatalog({ initialArticles }: Props) {
           </div>
 
           <div className="text-xs text-slate-400 font-medium">
-            Showing <strong className="text-white">{filteredArticles.length}</strong> verified analyses
+            Showing <strong className="text-white">{filteredArticles.length}</strong> published articles
           </div>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function ReviewsCatalog({ initialArticles }: Props) {
                     </span>
                     {article.categoryLabel && (
                       <span className="bg-slate-950/80 backdrop-blur-sm border border-slate-700 text-slate-300 text-[10px] font-semibold px-2 py-0.5 rounded">
-                        {article.categoryLabel}
+                        {article.historicalArchive ? 'Archive' : article.categoryLabel}
                       </span>
                     )}
                   </div>

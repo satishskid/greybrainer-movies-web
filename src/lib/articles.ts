@@ -50,6 +50,7 @@ function inferKind(title: string, tags: string[], rawType?: string | null): Arti
   if (rawType === "review") return "review";
   if (rawType === "brief") return "brief";
   if (rawType === "study") return "insight";
+  if (rawType === "comparison") return "comparison";
 
   if (rawType === "research_export" || lower.startsWith("greybrainer analysis:")) {
     return "review";
@@ -102,6 +103,8 @@ interface CloudflareManifestRing {
 }
 
 interface CloudflareManifestEntry {
+  historicalArchive?: boolean;
+  originalSourceUrl?: string | null;
   craftmatics?: CraftCriterionResult[];
   slug: string;
   title: string;
@@ -207,6 +210,8 @@ function normalizeCloudflareEntry(entry: CloudflareManifestEntry): SiteArticle {
   }
 
   return {
+    historicalArchive: entry.historicalArchive === true,
+    originalSourceUrl: entry.originalSourceUrl ?? undefined,
     id: `cf-${entry.slug}`,
     // Rendered by the backend: exactly what the publication receipt verifies on this page.
     contentHtml: entry.blogHtml ?? undefined,
@@ -278,7 +283,7 @@ async function manifest(query: string, fetcher: Fetcher): Promise<SiteArticle[]>
 
 /** Listings, archive and sitemap: verified-live articles only. */
 export async function getAllArticles(maxCount = DEFAULT_ARCHIVE_LIMIT, fetcher: Fetcher = publicApi): Promise<SiteArticle[]> {
-  return (await manifest(`limit=${Math.min(maxCount, 200)}`, fetcher))
+  return (await manifest(`limit=${Math.min(maxCount, 200)}&view=summary`, fetcher))
     .filter(article => article.status === "published")
     .sort((a, b) => b.publishedAtMs - a.publishedAtMs);
 }
