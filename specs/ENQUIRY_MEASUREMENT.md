@@ -27,3 +27,11 @@ Do not activate Meta or ads as part of this change. No real enquiry was submitte
 ## Verification
 
 32 storefront tests passed, including consent, receipt matching, fixed-payload privacy, replay suppression and blocked storage. Targeted ESLint and TypeScript passed. A fresh isolated Playwright browser exercised the real form against local code with intercepted synthetic API responses and GTM: 503 and wrong receipts emitted no event; retries retained one ID; matching success emitted exactly the fixed payload with analytics consent and nothing with necessary-only consent. No customer record or real Google event was created. Screenshots were inspected; no page errors occurred. Account-side GTM configuration and receiving-side GA4 verification remain separate pending steps.
+
+## Deployment, 2026-11-07
+
+Code e026ccc deployed to the production storefront as b9da92d6-e48f-40fa-912a-e46f94bd486a. Previous version for rollback: 49037e34-1ae0-4b2e-b25b-c223801df817. Production bindings and relay protection were retained; no database, DNS, engine or Meta changes.
+
+The browser form checks above were repeated against the deployed public homepage, still intercepting enquiry responses and GTM. Both consent states passed, no page errors occurred, no real enquiries were created and no real analytics events sent. Homepage, privacy and reports returned 200; public /studio/inbox returned 404.
+
+The connected marketing tool returned `No gtm connection found` on the account check. No GTM tag or container publication was changed. Actual generate_lead receiving-side delivery remains unverified. Note that consent is configured on the GA4 tag, not the custom-event trigger. A staging hostname deliberately does not emit production analytics.
