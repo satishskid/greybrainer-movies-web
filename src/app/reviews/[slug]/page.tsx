@@ -160,7 +160,8 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
         url: absoluteUrl("/"),
         sameAs: [
           "https://medium.com/@GreyBrainer",
-          "https://www.linkedin.com/company/greybrainer/",
+          "https://www.linkedin.com/company/146956056/",
+          "https://www.facebook.com/profile.php?id=61596601130152",
           "https://x.com/Greybrainlens",
           "https://www.instagram.com/greybrainlens/",
         ],

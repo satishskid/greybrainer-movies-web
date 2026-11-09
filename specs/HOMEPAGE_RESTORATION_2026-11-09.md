@@ -17,6 +17,9 @@ Verification performed firsthand:
 - Preview and production vinext builds passed (existing plugin sourcemap warnings).
 - Preview version f0e36d5b-ed0e-4d76-bda6-a3a5d18be655.
 - Production version 69f4f383-7f23-407b-8112-79979c9689fe.
+- Final social-profile navigation/schema correction: production version
+  3f5aa745-924f-43a0-9aa1-d023bed33f5c, using the new Facebook Page and LinkedIn
+  Showcase identity rather than the old profile/share URLs.
 - Clean Chrome at 1440px and 390px: HTTP 200, one h1, all four categories,
   24 cards, valid collection schema, correct production canonical, index/follow,
   zero broken card images, no horizontal overflow and zero browser errors.
