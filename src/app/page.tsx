@@ -75,7 +75,7 @@ export function HomeContent({ articles }: { articles: SiteArticle[] }) {
         </section>
         <div className="py-10"><StudioEnquiry /></div>
         <footer className="flex flex-wrap gap-5 border-t border-slate-800 pt-6 text-sm text-slate-400">
-          <Link href="/reviews">All reports</Link><Link href="/credits">Image credits & TMDB attribution</Link><Link href="/privacy">Privacy</Link>
+          <Link href="/reviews">All reports</Link><Link href="/credits">Image credits & TMDB attribution</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link>
         </footer>
       </div>
     </main>
