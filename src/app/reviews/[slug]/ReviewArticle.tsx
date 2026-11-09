@@ -3,6 +3,7 @@ import type { SiteArticle } from "@/lib/articleTypes";
 import { MorphokineticsWaveform } from "@/components/MorphokineticsWaveform";
 import { CraftmaticsReport } from "@/components/CraftmaticsReport";
 import { ImageCredits } from "@/components/ImageCredits";
+import { FeedConnect } from "@/components/FeedConnect";
 
 interface ReviewArticleProps {
   article: SiteArticle;
@@ -125,6 +126,9 @@ export function ReviewArticle({ article, relatedArticles = [] }: ReviewArticlePr
         )}
 
         <ImageCredits attribution={article.imageAttribution} imageUrl={article.posterImageUrl || article.coverImageUrl} />
+
+        {/* Audience Feed Delivery */}
+        <FeedConnect className="mt-14" />
 
         {/* 7. Enquiry */}
         <section aria-labelledby="enquiry-heading" className="mt-14 border border-slate-700 p-6">

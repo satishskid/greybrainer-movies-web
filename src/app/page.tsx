@@ -4,6 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { getAllArticles } from "@/lib/articles";
 import { SITE_DESCRIPTION, absoluteUrl } from "@/lib/site";
 import { StudioEnquiry } from "@/components/StudioEnquiry";
+import { AudienceProofBar } from "@/components/AudienceProofBar";
+import { FeedConnect } from "@/components/FeedConnect";
 import type { SiteArticle } from "@/lib/articleTypes";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +49,7 @@ export function HomeContent({ articles }: { articles: SiteArticle[] }) {
             <Link href="/reviews" className="font-semibold text-teal-300">All {articles.length} reports <ArrowRight className="inline h-4 w-4" /></Link>
           </nav>
         </header>
+        <AudienceProofBar className="my-6" />
         {articles.length === 0 && <p className="py-12">Reports are temporarily unavailable. Please try again shortly.</p>}
         {categories.map(category => {
           const matches = articles.filter(a => a.kind === category.kind);
@@ -73,6 +76,9 @@ export function HomeContent({ articles }: { articles: SiteArticle[] }) {
           <p className="mt-3 text-sm text-slate-400">Historical articles retain their original dates and archive labels. They have not been re-approved under the current editorial process.</p>
           <Link href="/archive" className="mt-4 inline-block text-teal-300 underline">Explore the historical archive</Link>
         </section>
+        <div className="py-10">
+          <FeedConnect />
+        </div>
         <div className="py-10"><StudioEnquiry /></div>
         <footer className="flex flex-wrap gap-5 border-t border-slate-800 pt-6 text-sm text-slate-400">
           <Link href="/reviews">All reports</Link><Link href="/credits">Image credits & TMDB attribution</Link><Link href="/terms">Terms</Link><Link href="/privacy">Privacy</Link>

@@ -7,10 +7,11 @@ export async function publicProxy(request: Request, env: { PUBLIC_RELAY_TOKEN?: 
   if (url.origin !== publicOrigin) return new Response('Not found', { status: 404 });
   const enquiry = url.pathname === '/api/studio-diagnostic';
   const image = /^\/api\/assets\/[^/]+$/.test(url.pathname);
-  if ((url.pathname.startsWith('/api/') && !enquiry && !image) || url.pathname.startsWith('/studio') || url.pathname.startsWith('/hub')) {
+  const audience = url.pathname.startsWith('/api/audience/');
+  if ((url.pathname.startsWith('/api/') && !enquiry && !image && !audience) || url.pathname.startsWith('/studio') || url.pathname.startsWith('/hub')) {
     return new Response('Not found', { status: 404 });
   }
-  if (!['GET', 'HEAD'].includes(request.method) && !(request.method === 'POST' && enquiry)) return new Response('Method not allowed', { status: 405 });
+  if (!['GET', 'HEAD'].includes(request.method) && !(request.method === 'POST' && (enquiry || audience))) return new Response('Method not allowed', { status: 405 });
   if (request.method === 'POST' && request.headers.get('origin') !== publicOrigin) return new Response('Origin not allowed', { status: 403 });
   if (!env.PUBLIC_RELAY_TOKEN) return new Response('Website temporarily unavailable', { status: 503 });
   const headers = new Headers(request.headers);
