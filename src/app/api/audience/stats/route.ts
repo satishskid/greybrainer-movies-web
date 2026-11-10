@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
-import { AUDIENCE_METRICS } from "@/components/AudienceProofBar";
+import { VERIFIED_CHANNELS } from "@/components/AudienceProofBar";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const total = AUDIENCE_METRICS.reduce((sum, item) => sum + item.count, 0);
-
   return NextResponse.json(
     {
-      total,
-      channels: AUDIENCE_METRICS,
+      channels: VERIFIED_CHANNELS.map((ch) => ({
+        id: ch.id,
+        label: ch.label,
+        handle: ch.displayHandle,
+        url: ch.url,
+        description: ch.description,
+        status: "active",
+      })),
+      countsVerified: false,
+      note: "Follower counts are not fabricated. Live third-party follower metrics are pending direct provider API integration; displayed channels are verified active publication destinations.",
       updatedAt: new Date().toISOString(),
     },
     {
