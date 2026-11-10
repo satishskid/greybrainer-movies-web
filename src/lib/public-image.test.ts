@@ -3,10 +3,21 @@ import assert from 'node:assert/strict';
 import { publicImage } from './public-image';
 
 test('public media cannot read draft payloads, arbitrary paths or active SVG content', async () => {
-  for (const key of ['drafts/private.json', 'knowledge/report.md', 'draft-assets/draft_x/../private.png', 'draft-assets/draft_x/cover.svg', 'draft-assets%2Fdraft_x%2Fcover.png']) {
+  for (const key of ['drafts/private.json', 'knowledge/report.md', 'draft-assets/draft_x/../private.png', 'draft-assets/draft_x/cover.svg', 'draft-assets%2Fdraft_x%2Fcover.png', 'overnight-reviews/job/story.json', 'assets/overnight/job/failure.json', 'assets/overnight/../cover.jpg', 'assets/overnight/job/cover.svg']) {
     const response = await publicImage(key, async () => { throw new Error('Must not contact backend'); });
     assert.equal(response.status, 404);
   }
+});
+test('overnight covers pass the same raster MIME and response-header restrictions', async () => {
+  const key = 'assets/overnight/job-123/cover.jpg';
+  const response = await publicImage(key, async path => {
+    assert.equal(path, `/api/assets/${encodeURIComponent(key)}`);
+    return new Response(new Uint8Array([255, 216, 255]), { headers: { 'content-type': 'image/jpeg', 'set-cookie': 'private=bad' } });
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('set-cookie'), null);
+  const nonImage = await publicImage(key, async () => new Response('{}', { headers: { 'content-type': 'application/json' } }));
+  assert.equal(nonImage.status, 415);
 });
 test('public media forwards only the image key and never forwards backend cookies', async () => {
   const response = await publicImage('draft-assets/draft_x/cover-123.png', async path => {

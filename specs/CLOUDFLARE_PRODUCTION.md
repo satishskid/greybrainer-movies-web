@@ -71,12 +71,21 @@ canonical-host check remains a second filter. A bound production homepage probe
 improved from 11,651 ms to 1,266 ms with identical rendered content.
 
 Uploaded raster images use `/api/assets/<encoded key>`. This route accepts only
-`draft-assets/<draft>/<filename>` with raster-image extensions and MIME types;
+`draft-assets/<draft>/<filename>` with raster-image extensions and MIME types,
+or the exact `assets/overnight/<job>/cover.jpg` pattern for generated covers;
 it cannot read report JSON, knowledge objects, SVG, arbitrary paths or private APIs.
 Backend cookies are not forwarded. Existing external TMDB images remain external.
 Public robots explicitly allows `/api/assets/`, while other API paths stay disallowed.
 Latest production storefront version: `fbdd58d8-8aaf-499c-9db3-862a392d7293`;
 28 storefront tests pass, with public checks refreshed on 2026-11-07.
+
+Overnight-cover release on 2026-11-10: version
+`090e0027-7c20-4c45-adc8-ffae1a999116`. All 40 storefront tests pass.
+The completed Wild Horse Nine draft's stored cover returns HTTP 200 image/jpeg
+through the public domain; its private overnight research path returns 404.
+Only image-proxy code changed; no article approval or publication was performed.
+An unrelated untracked public/wire artifact was excluded from the generated
+deployment's asset list and was not modified or committed.
 
 ## Acceptance and operation
 

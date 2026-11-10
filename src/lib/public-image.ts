@@ -1,5 +1,7 @@
 export async function publicImage(key: string, fetchAsset?: (path: string) => Promise<Response>): Promise<Response> {
-  if (!/^draft-assets\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.(png|jpe?g|webp|gif|avif)$/i.test(key)) {
+  const uploaded = /^draft-assets\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+\.(png|jpe?g|webp|gif|avif)$/i.test(key);
+  const overnight = /^assets\/overnight\/[a-zA-Z0-9_-]+\/cover\.jpg$/.test(key);
+  if (!uploaded && !overnight) {
     return new Response('Image not found', { status: 404 });
   }
   const path = `/api/assets/${encodeURIComponent(key)}`;
