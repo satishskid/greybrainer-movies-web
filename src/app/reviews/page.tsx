@@ -9,7 +9,7 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: "Cinematic Intelligence & Deep Reviews | Greybrainer Movies",
+  title: "Cinematic Intelligence & Deep Reviews",
   description:
     "Greybrainer deep movie reviews and cinematic intelligence with three-layer analysis across story, conceptualization, execution, and Morphokinetics.",
   alternates: { canonical: "/reviews" },

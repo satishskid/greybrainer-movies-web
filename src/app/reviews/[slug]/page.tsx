@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import { ReviewArticle } from "./ReviewArticle";
 import { getAllArticles, getArticleBySlug } from "@/lib/articles";
 import type { SiteArticle } from "@/lib/articleTypes";
+import { articleSchemaFacts, publicationDate } from "@/lib/article-schema";
 import { absoluteUrl, publicAuthorName, SITE_BRAND, SITE_DESCRIPTION, SITE_NAME, toPlainText } from "@/lib/site";
 
 interface Props {
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url: absoluteUrl(canonical),
       images,
       type: "article",
-      publishedTime: article.publishedAt || undefined,
+      publishedTime: publicationDate(article.publishedAt),
       authors: [authorName],
     },
     twitter: {
@@ -94,31 +95,17 @@ function articleImageUrls(article: SiteArticle) {
   ].filter((url): url is string => Boolean(url));
 }
 
-function parseRating(score?: string) {
-  if (!score) return null;
-  const match = score.match(/\d+(?:\.\d+)?/);
-  if (!match) return null;
-  const value = Number(match[0]);
-  if (!Number.isFinite(value)) return null;
-  return value > 10 ? value / 10 : value;
-}
-
 function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]) {
   const canonicalUrl = absoluteUrl(`/reviews/${article.slug}`);
   const description = article.seoDescription || article.verdict || article.excerpt;
-  const rating = parseRating(article.overallScore);
-  const publishedDate = article.publishedAt || new Date().toISOString();
-  const articleType = article.kind === "review" ? "Review" : "Article";
   const authorName = publicAuthorName(article.createdBy);
   const mainEntity = {
-    "@type": articleType,
+    ...articleSchemaFacts(article),
     "@id": `${canonicalUrl}#article`,
     headline: article.searchHeadline || article.title,
     name: article.title,
     description: toPlainText(description || SITE_DESCRIPTION, 240),
     image: articleImageUrls(article),
-    datePublished: publishedDate,
-    dateModified: publishedDate,
     author: {
       "@type": "Organization",
       name: authorName,
@@ -130,24 +117,6 @@ function buildArticleJsonLd(article: SiteArticle, relatedArticles: SiteArticle[]
       "@id": `${canonicalUrl}#webpage`,
     },
     keywords: article.tags,
-    ...(article.kind === "review"
-      ? {
-          itemReviewed: {
-            "@type": "CreativeWork",
-            name: article.title,
-          },
-          ...(rating
-            ? {
-                reviewRating: {
-                  "@type": "Rating",
-                  ratingValue: rating,
-                  bestRating: 10,
-                  worstRating: 0,
-                },
-              }
-            : {}),
-        }
-      : {}),
   };
 
   return {
